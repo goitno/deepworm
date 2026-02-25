@@ -526,3 +526,59 @@ def extract_sections(report: str) -> list[dict[str, str]]:
         })
 
     return sections
+
+
+def extract_links(report: str) -> list[dict[str, str]]:
+    """Extract all links from a markdown report.
+
+    Returns:
+        List of dicts with 'text', 'url', 'type' keys.
+        Type is 'inline' for [text](url), 'bare' for plain URLs, 'reference' for [text][ref].
+    """
+    links: list[dict[str, str]] = []
+    seen_urls: set[str] = set()
+
+    # Inline markdown links: [text](url)
+    for match in re.finditer(r'\[([^\]]+)\]\(([^)]+)\)', report):
+        url = match.group(2).strip()
+        if url not in seen_urls:
+            seen_urls.add(url)
+            links.append({"text": match.group(1), "url": url, "type": "inline"})
+
+    # Bare URLs
+    for match in re.finditer(r'(?<!\()(https?://[^\s\)>\]]+)', report):
+        url = match.group(1).rstrip(".,;:!?")
+        if url not in seen_urls:
+            seen_urls.add(url)
+            links.append({"text": url, "url": url, "type": "bare"})
+
+    return links
+
+
+def report_summary(report: str, max_sentences: int = 3) -> str:
+    """Extract a brief summary from the report.
+
+    Takes the first few sentences from the first substantial paragraph
+    after any title heading.
+    """
+    lines = report.splitlines()
+    in_content = False
+    text_lines: list[str] = []
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            if text_lines:
+                break  # end of first content paragraph
+            continue
+        if stripped.startswith("#"):
+            in_content = True
+            continue
+        if in_content and not stripped.startswith(("-", "*", "•", "|", ">")):
+            text_lines.append(stripped)
+
+    text = " ".join(text_lines)
+    # Split into sentences
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    selected = sentences[:max_sentences]
+    return " ".join(selected).strip()

@@ -261,6 +261,27 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Maximum research time in seconds (0 = unlimited)",
     )
+    parser.add_argument(
+        "--resume",
+        type=str,
+        metavar="FILE",
+        nargs="?",
+        const="auto",
+        help="Resume research from a saved session file (or 'auto' to find latest)",
+    )
+    parser.add_argument(
+        "--log-file",
+        type=str,
+        metavar="PATH",
+        help="Log to a file in addition to stderr",
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=["debug", "info", "warning", "error"],
+        default=None,
+        help="Set logging level",
+    )
     return parser
 
 
@@ -270,6 +291,12 @@ def main(args: list[str] | None = None) -> None:
 
     if opts.debug:
         logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s: %(message)s")
+
+    # Setup structured logging
+    if opts.log_file or opts.log_level:
+        from .log import setup_logging
+        level = opts.log_level.upper() if opts.log_level else ("DEBUG" if opts.debug else "WARNING")
+        setup_logging(level=level, log_file=opts.log_file)
 
     # Handle diff mode
     if opts.diff:
@@ -496,6 +523,42 @@ def main(args: list[str] | None = None) -> None:
         if opts.copy:
             _copy_to_clipboard(report)
         return
+
+    # Resume mode
+    if opts.resume:
+        from pathlib import Path
+        from .session import list_sessions, load_session
+
+        if opts.resume == "auto":
+            # Find the latest in-progress session
+            sessions = list_sessions()
+            in_progress = [s for s in sessions if s.status == "in_progress"]
+            if not in_progress:
+                console.print("[yellow]No in-progress sessions found to resume.[/yellow]")
+                sys.exit(1)
+            latest = max(in_progress, key=lambda s: s.updated_at)
+            slug = latest.topic.lower().strip()
+            import re as _re
+            slug = _re.sub(r'[^\w\s-]', '', slug)
+            slug = _re.sub(r'[-\s]+', '-', slug)[:50]
+            session_path = Path(f".deepworm-session-{slug}.json")
+        else:
+            session_path = Path(opts.resume)
+
+        try:
+            session_data = load_session(session_path)
+            meta = session_data["meta"]
+            console.print(
+                f"[bold cyan]Resuming:[/bold cyan] {meta['topic']}\n"
+                f"  Iterations done: {meta['iterations_done']} | Sources: {meta['total_sources']}"
+            )
+            opts.topic = meta["topic"]
+        except FileNotFoundError:
+            console.print(f"[red]Session file not found: {session_path}[/red]")
+            sys.exit(1)
+        except ValueError as e:
+            console.print(f"[red]Invalid session file: {e}[/red]")
+            sys.exit(1)
 
     if opts.topic is None:
         # Interactive mode

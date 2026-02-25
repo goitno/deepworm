@@ -183,8 +183,12 @@ class DeepResearcher:
         return self.client
 
     def _llm_call(self, llm: LLMClient, method: str, *args, **kwargs):
-        """Rate-limited LLM call."""
+        """Rate-limited LLM call with retry."""
         self._rate_limiter.acquire()
+        if method == "chat":
+            return llm.chat_with_retry(*args, **kwargs)
+        elif method == "chat_json":
+            return llm.chat_json(*args, **kwargs)
         fn = getattr(llm, method)
         return fn(*args, **kwargs)
 

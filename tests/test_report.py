@@ -5,12 +5,14 @@ import tempfile
 
 from deepworm.report import (
     _slugify,
+    extract_links,
     extract_sections,
     extract_toc,
     generate_toc_markdown,
     inject_toc,
     markdown_to_html,
     report_stats,
+    report_summary,
     save_report,
 )
 
@@ -185,3 +187,28 @@ def test_extract_sections_content():
     summary = next(s for s in sections if s["heading"] == "Executive Summary")
     assert "summary" in summary["content"].lower()
 
+
+def test_extract_links():
+    report = """# Title
+
+Check [this link](https://example.com/page) and https://bare.example.com/path.
+
+Also see [reference](https://docs.example.org).
+"""
+    links = extract_links(report)
+    assert len(links) == 3
+    urls = [l["url"] for l in links]
+    assert "https://example.com/page" in urls
+    assert "https://bare.example.com/path" in urls
+
+
+def test_extract_links_dedup():
+    report = "See https://example.com and https://example.com again."
+    links = extract_links(report)
+    assert len(links) == 1
+
+
+def test_report_summary():
+    summary = report_summary(SAMPLE_REPORT, max_sentences=2)
+    assert len(summary) > 10
+    assert summary.count(". ") <= 2 or summary.endswith(".")
