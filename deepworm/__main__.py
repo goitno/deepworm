@@ -145,6 +145,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Clear all research history and exit",
     )
+    parser.add_argument(
+        "--serve",
+        nargs="?",
+        const=8888,
+        type=int,
+        metavar="PORT",
+        help="Start web UI server (default port: 8888)",
+    )
     return parser
 
 
@@ -204,6 +212,12 @@ def main(args: list[str] | None = None) -> None:
     if opts.history_clear:
         count = clear_history()
         console.print(f"[green]Cleared {count} history entries.[/green]")
+        return
+
+    # Handle web UI
+    if opts.serve is not None:
+        from .web import serve
+        serve(port=opts.serve)
         return
 
     # Handle cache operations
