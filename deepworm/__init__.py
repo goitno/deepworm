@@ -6,14 +6,38 @@ __version__ = "0.1.0"
 
 from .async_api import AsyncResearcher, async_research
 from .events import Event, EventEmitter, EventType
+from .exceptions import (
+    APIKeyError,
+    ConfigError,
+    ContentExtractionError,
+    DeepWormError,
+    ModelNotFoundError,
+    NetworkError,
+    ProviderError,
+    RateLimitError,
+    SearchError,
+    SessionError,
+)
+from .history import HistoryEntry
 from .researcher import DeepResearcher
 
 __all__ = [
+    "APIKeyError",
     "AsyncResearcher",
+    "ConfigError",
+    "ContentExtractionError",
     "DeepResearcher",
+    "DeepWormError",
     "Event",
     "EventEmitter",
     "EventType",
+    "HistoryEntry",
+    "ModelNotFoundError",
+    "NetworkError",
+    "ProviderError",
+    "RateLimitError",
+    "SearchError",
+    "SessionError",
     "__version__",
     "async_research",
     "research",

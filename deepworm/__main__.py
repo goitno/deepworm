@@ -121,6 +121,30 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Search engine provider (default: duckduckgo)",
     )
+    parser.add_argument(
+        "--history",
+        nargs="?",
+        const=10,
+        type=int,
+        metavar="N",
+        help="Show last N research entries (default: 10) and exit",
+    )
+    parser.add_argument(
+        "--history-search",
+        type=str,
+        metavar="QUERY",
+        help="Search research history by topic keyword and exit",
+    )
+    parser.add_argument(
+        "--history-stats",
+        action="store_true",
+        help="Show aggregate research statistics and exit",
+    )
+    parser.add_argument(
+        "--history-clear",
+        action="store_true",
+        help="Clear all research history and exit",
+    )
     return parser
 
 
@@ -130,6 +154,57 @@ def main(args: list[str] | None = None) -> None:
 
     if opts.debug:
         logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s: %(message)s")
+
+    # Handle history operations
+    from .history import clear_history, list_entries, search_history, stats as history_stats
+
+    if opts.history is not None:
+        entries = list_entries(limit=opts.history)
+        if not entries:
+            console.print("[dim]No research history yet.[/dim]")
+            return
+        console.print(f"[bold]Last {len(entries)} research entries:[/bold]\n")
+        for e in entries:
+            console.print(
+                f"  [cyan]{e.created_iso[:19]}[/cyan]  "
+                f"[bold]{e.topic[:60]}[/bold]  "
+                f"[dim]{e.provider}/{e.model} · {e.total_sources} sources · {e.elapsed_seconds:.0f}s[/dim]"
+            )
+        return
+
+    if opts.history_search:
+        entries = search_history(opts.history_search)
+        if not entries:
+            console.print(f"[dim]No history entries matching '{opts.history_search}'.[/dim]")
+            return
+        console.print(f"[bold]Found {len(entries)} entries matching '{opts.history_search}':[/bold]\n")
+        for e in entries:
+            console.print(
+                f"  [cyan]{e.created_iso[:19]}[/cyan]  "
+                f"[bold]{e.topic[:60]}[/bold]  "
+                f"[dim]{e.total_sources} sources · {e.elapsed_seconds:.0f}s[/dim]"
+            )
+        return
+
+    if opts.history_stats:
+        s = history_stats()
+        if s["total_researches"] == 0:
+            console.print("[dim]No research history yet.[/dim]")
+            return
+        console.print("[bold]Research Statistics[/bold]\n")
+        console.print(f"  Total researches:  {s['total_researches']}")
+        console.print(f"  Total sources:     {s['total_sources']}")
+        console.print(f"  Total time:        {s['total_time_seconds']:.0f}s")
+        console.print(f"  Avg time/research: {s['avg_time_seconds']:.1f}s")
+        console.print(f"  Avg sources:       {s['avg_sources']:.1f}")
+        console.print(f"  Models used:       {', '.join(s['models_used'])}")
+        console.print(f"  Providers used:    {', '.join(s['providers_used'])}")
+        return
+
+    if opts.history_clear:
+        count = clear_history()
+        console.print(f"[green]Cleared {count} history entries.[/green]")
+        return
 
     # Handle cache operations
     from .cache import Cache, get_cache
@@ -200,6 +275,21 @@ def main(args: list[str] | None = None) -> None:
     except KeyboardInterrupt:
         console.print("\n[yellow]Research interrupted.[/yellow]")
         return
+    except Exception as e:
+        # Import our custom exceptions
+        from .exceptions import DeepWormError
+        if isinstance(e, DeepWormError):
+            console.print(f"\n[red bold]Error:[/red bold] {e}")
+            if e.hint:
+                console.print(f"[dim]  Hint: {e.hint}[/dim]")
+        else:
+            console.print(f"\n[red bold]Unexpected error:[/red bold] {e}")
+            if opts.debug:
+                import traceback
+                traceback.print_exc()
+            else:
+                console.print("[dim]  Run with --debug for full traceback[/dim]")
+        sys.exit(1)
 
     _output_report(report, opts)
 

@@ -27,6 +27,7 @@ from .config import Config
 from .llm import LLMClient, get_client
 from .cache import Cache, get_cache
 from .events import Event, EventEmitter, EventType
+from .history import add_entry as _add_history
 from .plugins import PluginManager
 from .search import SearchResult, fetch_page_text, search_web
 from .session import save_session
@@ -303,6 +304,23 @@ class DeepResearcher:
             pass
 
         total_time = time.time() - t_start
+
+        # Record in persistent history
+        try:
+            _add_history(
+                topic=topic,
+                elapsed=total_time,
+                model=self.config.model,
+                provider=self.config.provider,
+                depth=self.config.depth,
+                breadth=self.config.breadth,
+                total_sources=len(state.sources),
+                report_length=len(report),
+                persona=persona,
+                output_file=self.config.output_file,
+            )
+        except Exception:
+            logger.debug("Failed to record history entry")
 
         self.events.emit(Event(
             type=EventType.RESEARCH_COMPLETE,

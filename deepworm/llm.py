@@ -13,6 +13,7 @@ import time
 from typing import Any, Optional
 
 from .config import Config
+from .exceptions import APIKeyError, ModelNotFoundError, ProviderError, RateLimitError
 
 logger = logging.getLogger("deepworm")
 
@@ -21,7 +22,11 @@ RETRY_BASE_DELAY = 1.0  # seconds
 
 
 def get_client(config: Config) -> "LLMClient":
-    """Create an LLM client based on config."""
+    """Create an LLM client based on config.
+
+    Raises :class:`APIKeyError` if the required API key env var is not set.
+    Raises :class:`ProviderError` for unknown providers.
+    """
     provider = config.provider
 
     if provider == "ollama":
@@ -31,24 +36,38 @@ def get_client(config: Config) -> "LLMClient":
             model=config.model,
         )
     elif provider == "openai":
-        api_key = os.environ.get("OPENAI_API_KEY", "")
+        api_key = config.api_key or os.environ.get("OPENAI_API_KEY", "")
+        if not api_key:
+            raise APIKeyError(
+                "OpenAI API key not found",
+                hint="Set OPENAI_API_KEY environment variable or add api_key to config file",
+            )
         return OpenAICompatibleClient(
             api_key=api_key,
-            base_url="https://api.openai.com/v1",
+            base_url=config.base_url or "https://api.openai.com/v1",
             model=config.model,
         )
     elif provider == "anthropic":
-        return AnthropicClient(
-            api_key=os.environ.get("ANTHROPIC_API_KEY", ""),
-            model=config.model,
-        )
+        api_key = config.api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+        if not api_key:
+            raise APIKeyError(
+                "Anthropic API key not found",
+                hint="Set ANTHROPIC_API_KEY environment variable or add api_key to config file",
+            )
+        return AnthropicClient(api_key=api_key, model=config.model)
     elif provider == "google":
-        return GoogleClient(
-            api_key=os.environ.get("GOOGLE_API_KEY", ""),
-            model=config.model,
-        )
+        api_key = config.api_key or os.environ.get("GOOGLE_API_KEY", "")
+        if not api_key:
+            raise APIKeyError(
+                "Google API key not found",
+                hint="Set GOOGLE_API_KEY environment variable or add api_key to config file",
+            )
+        return GoogleClient(api_key=api_key, model=config.model)
     else:
-        raise ValueError(f"Unknown provider: {provider}")
+        raise ProviderError(
+            f"Unknown provider: {provider}",
+            hint="Supported providers: openai, anthropic, google, ollama",
+        )
 
 
 class LLMClient:
@@ -70,13 +89,20 @@ class LLMClient:
         temperature: float = 0.3,
         max_retries: int = MAX_RETRIES,
     ) -> str:
-        """Chat with automatic retry on transient failures."""
+        """Chat with automatic retry on transient failures.
+
+        Detects rate-limit responses and wraps them as :class:`RateLimitError`.
+        """
         last_error = None
         for attempt in range(max_retries):
             try:
                 return self.chat(messages, temperature=temperature)
             except Exception as e:
                 last_error = e
+                # Detect rate-limit errors from any provider
+                err_str = str(e).lower()
+                if "rate" in err_str and "limit" in err_str:
+                    raise RateLimitError(provider=getattr(self, "model", "unknown")) from e
                 if attempt < max_retries - 1:
                     delay = RETRY_BASE_DELAY * (2 ** attempt)
                     logger.debug(f"LLM call failed (attempt {attempt + 1}), retrying in {delay}s: {e}")
