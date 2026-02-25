@@ -535,7 +535,11 @@ tracker.complete()
 | Serialization | JSON/YAML/CSV/XML/Markdown table, auto-detect | No |
 | Rate limiting | Token bucket, sliding/fixed window, per-key | No |
 | Testing utils | Fixtures, mocks, snapshots, timing assertions | No |
-| Lines of code | ~35,000 | ~10,000+ |
+| Data pipeline | Composable ETL, fan-out/in, batch processing | No |
+| Concurrency | Thread pool, task queue, atomic types, debounce | No |
+| CLI helpers | Arg parsing, progress bars, color, box drawing | No |
+| Protocols | Result/Option/Either types, type guards, Lazy | No |
+| Lines of code | ~40,000 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -626,6 +630,10 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Multi-format serialization** — JSON, YAML, CSV, XML, Markdown table with auto-detection and conversion
 - **Rate limiting** — token bucket, sliding window, fixed window strategies with per-key limiting
 - **Testing utilities** — fixtures, mock functions, snapshot testing, timing assertions, sample data generators
+- **Data pipeline** — composable ETL stages, fan-out/fan-in, batch processing, functional transforms
+- **Concurrency** — thread pool, task queue, atomic counter/value, debouncer, throttle, once
+- **CLI helpers** — argument parsing, progress bars, spinners, color output, table formatting, box drawing
+- **Protocols** — Result/Option/Either algebraic types, runtime-checkable Protocol interfaces, type guards, Lazy evaluation
 
 ## License
 
