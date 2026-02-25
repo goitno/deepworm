@@ -29,6 +29,7 @@ from .cache import Cache, get_cache
 from .events import Event, EventEmitter, EventType
 from .history import add_entry as _add_history
 from .languages import get_language_instruction
+from .metrics import MetricsCollector
 from .plugins import PluginManager
 from .search import SearchResult, fetch_page_text, search_web
 from .session import save_session
@@ -153,6 +154,7 @@ class DeepResearcher:
             max_calls=self.config.max_requests_per_minute,
             period=60.0,
         )
+        self._metrics = MetricsCollector()
 
     def _progress(self, msg: str) -> None:
         if self._on_progress:
@@ -272,6 +274,7 @@ class DeepResearcher:
                 queries = self._generate_followup_queries(llm, state)
 
             state.queries.extend(queries)
+            self._metrics.increment("search_queries", len(queries))
 
             # Apply plugin hooks
             queries = self.plugins.apply_transform_queries(topic, queries)
@@ -288,7 +291,8 @@ class DeepResearcher:
                     console.print(f"  [dim]• {q}[/dim]")
 
             # Search and fetch
-            new_sources = self._search_and_fetch(queries, verbose=verbose)
+            with self._metrics.time("search"):
+                new_sources = self._search_and_fetch(queries, verbose=verbose)
             state.sources.extend(new_sources)
 
             if verbose:
@@ -304,6 +308,7 @@ class DeepResearcher:
                 # Skip near-duplicate content
                 if self._dedup.is_duplicate(source.content):
                     logger.debug("Skipping duplicate: %s", source.url)
+                    self._metrics.increment("duplicates_skipped")
                     continue
                 # Apply filter hook
                 if not self.plugins.apply_filter_source(source.url, source.title, source.content):
@@ -314,6 +319,7 @@ class DeepResearcher:
                 source.findings = findings
                 source.relevance = self._score_source(source, topic)
                 state.findings.append(findings)
+                self._metrics.increment("sources_analyzed")
 
             elapsed = time.time() - t_iter
             self._progress(f"Completed iteration {i + 1}")
@@ -417,6 +423,13 @@ class DeepResearcher:
 
         # Store sources for post-research access (e.g., source export)
         self.last_sources = state.sources
+
+        # Finalize metrics
+        self.last_metrics = self._metrics.finalize()
+        if state.sources:
+            relevances = [s.relevance for s in state.sources if s.relevance > 0]
+            if relevances:
+                self.last_metrics.avg_source_relevance = sum(relevances) / len(relevances)
 
         return report
 

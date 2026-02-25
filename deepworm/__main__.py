@@ -282,6 +282,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Set logging level",
     )
+    parser.add_argument(
+        "--metrics",
+        action="store_true",
+        help="Show detailed research metrics after completion",
+    )
     return parser
 
 
@@ -652,6 +657,26 @@ def main(args: list[str] | None = None) -> None:
             console.print("\n[dim]Suggestions:[/dim]")
             for tip in qs.suggestions:
                 console.print(f"  [dim]• {tip}[/dim]")
+
+    # Show research metrics if requested
+    if opts.metrics:
+        m = getattr(researcher, "last_metrics", None)
+        if m:
+            console.print(f"\n[bold]Research Metrics[/bold]")
+            console.print(f"  Total time:      {m.total_time:.1f}s")
+            console.print(f"  Search time:     {m.search_time:.1f}s")
+            console.print(f"  Analysis time:   {m.analysis_time:.1f}s")
+            console.print(f"  Synthesis time:  {m.synthesis_time:.1f}s")
+            console.print(f"  API calls:       {m.api_calls}")
+            console.print(f"  Queries:         {m.search_queries}")
+            console.print(f"  Pages fetched:   {m.pages_fetched}")
+            console.print(f"  Sources:         {m.sources_analyzed}")
+            console.print(f"  Duplicates:      {m.duplicates_skipped}")
+            console.print(f"  Fetch rate:      {m.success_rate:.0%}")
+            if m.retries > 0:
+                console.print(f"  Retries:         {m.retries}")
+            if m.errors > 0:
+                console.print(f"  Errors:          {m.errors}")
 
     # Export sources if requested
     if opts.export_sources:
