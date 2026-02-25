@@ -243,6 +243,24 @@ def build_parser() -> argparse.ArgumentParser:
         metavar=("OLD", "NEW"),
         help="Show diff between two report files and exit",
     )
+    parser.add_argument(
+        "--score",
+        action="store_true",
+        help="Show report quality score after research",
+    )
+    parser.add_argument(
+        "--sections",
+        type=str,
+        metavar="PATTERN",
+        help="Filter report to sections matching pattern (regex)",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        metavar="SECONDS",
+        default=None,
+        help="Maximum research time in seconds (0 = unlimited)",
+    )
     return parser
 
 
@@ -437,6 +455,8 @@ def main(args: list[str] | None = None) -> None:
         config.breadth = opts.breadth
     if opts.search_provider:
         config.search_provider = opts.search_provider
+    if opts.timeout is not None:
+        config.timeout_seconds = opts.timeout
 
     # Comparison mode
     if opts.compare:
@@ -526,6 +546,21 @@ def main(args: list[str] | None = None) -> None:
         from .report import inject_toc
         report = inject_toc(report)
 
+    # Filter sections if requested
+    if opts.sections:
+        import re as _re
+        from .report import extract_sections
+        sections = extract_sections(report)
+        filtered = [s for s in sections if _re.search(opts.sections, s["heading"], _re.IGNORECASE)]
+        if filtered:
+            parts = []
+            for s in filtered:
+                level = s["level"]
+                parts.append(f"{'#' * level} {s['heading']}\n\n{s['content'].strip()}")
+            report = "\n\n".join(parts)
+        else:
+            console.print(f"[yellow]No sections matched pattern '{opts.sections}'[/yellow]")
+
     _output_report(report, opts)
 
     # Show report stats if requested
@@ -539,6 +574,21 @@ def main(args: list[str] | None = None) -> None:
         console.print(f"  Headings:    {s['heading_count']}")
         console.print(f"  Links:       {s['link_count']}")
         console.print(f"  Reading:     ~{s['reading_time_minutes']} min")
+
+    # Show report quality score if requested
+    if opts.score:
+        from .scoring import score_report
+        qs = score_report(report)
+        console.print(f"\n[bold]Report Quality: {qs.grade} ({qs.overall:.0%})[/bold]")
+        console.print(f"  Structure:    {qs.structure:.0%}")
+        console.print(f"  Depth:        {qs.depth:.0%}")
+        console.print(f"  Sources:      {qs.sources:.0%}")
+        console.print(f"  Readability:  {qs.readability:.0%}")
+        console.print(f"  Completeness: {qs.completeness:.0%}")
+        if qs.suggestions:
+            console.print("\n[dim]Suggestions:[/dim]")
+            for tip in qs.suggestions:
+                console.print(f"  [dim]• {tip}[/dim]")
 
     # Export sources if requested
     if opts.export_sources:

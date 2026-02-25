@@ -124,3 +124,47 @@ def test_config_search_settings():
     )
     assert config.search_region == "us-en"
     assert config.search_max_results == 15
+
+
+def test_config_validation_invalid_provider():
+    """Should reject invalid provider."""
+    import pytest
+    with pytest.raises(ValueError, match="Invalid provider"):
+        Config(provider="invalid_provider", api_key="test")
+
+
+def test_config_validation_depth_range():
+    """Should reject out-of-range depth."""
+    import pytest
+    with pytest.raises(ValueError, match="depth"):
+        Config(provider="ollama", api_key="ollama", depth=0)
+    with pytest.raises(ValueError, match="depth"):
+        Config(provider="ollama", api_key="ollama", depth=21)
+
+
+def test_config_validation_breadth_range():
+    """Should reject out-of-range breadth."""
+    import pytest
+    with pytest.raises(ValueError, match="breadth"):
+        Config(provider="ollama", api_key="ollama", breadth=0)
+
+
+def test_config_validation_temperature_range():
+    """Should reject out-of-range temperature."""
+    import pytest
+    with pytest.raises(ValueError, match="temperature"):
+        Config(provider="ollama", api_key="ollama", temperature=-0.1)
+    with pytest.raises(ValueError, match="temperature"):
+        Config(provider="ollama", api_key="ollama", temperature=2.1)
+
+
+def test_config_timeout_setting():
+    """Timeout setting should be configurable."""
+    config = Config(provider="ollama", api_key="ollama", timeout_seconds=300)
+    assert config.timeout_seconds == 300
+
+
+def test_config_rate_limit_setting():
+    """Rate limit setting should be configurable."""
+    config = Config(provider="ollama", api_key="ollama", max_requests_per_minute=30)
+    assert config.max_requests_per_minute == 30

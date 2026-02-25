@@ -42,12 +42,18 @@ class Config:
     search_max_results: int = 8
     search_provider: str = "duckduckgo"  # duckduckgo, brave, searxng
 
+    # Rate limiting
+    max_requests_per_minute: int = 60  # LLM API rate limit
+    timeout_seconds: int = 0  # Overall research time budget (0 = unlimited)
+
     def __post_init__(self):
         if self.api_key is None:
             self._detect_provider()
 
         if self.model is None:
             self.model = self._default_model()
+
+        self.validate()
 
     def _detect_provider(self):
         """Auto-detect provider from environment variables."""
@@ -79,6 +85,52 @@ class Config:
     @property
     def ollama_base_url(self) -> str:
         return self.base_url or "http://localhost:11434/v1"
+
+    def validate(self) -> None:
+        """Validate configuration values.
+
+        Raises:
+            ValueError: If any configuration value is invalid.
+        """
+        VALID_PROVIDERS = {"openai", "anthropic", "google", "ollama"}
+        VALID_FORMATS = {"markdown", "html", "text", "json", "pdf"}
+        VALID_SEARCH_PROVIDERS = {"duckduckgo", "brave", "searxng"}
+
+        if self.provider not in VALID_PROVIDERS:
+            raise ValueError(
+                f"Invalid provider '{self.provider}'. "
+                f"Must be one of: {', '.join(sorted(VALID_PROVIDERS))}"
+            )
+        if self.depth < 1 or self.depth > 20:
+            raise ValueError(f"depth must be between 1 and 20, got {self.depth}")
+        if self.breadth < 1 or self.breadth > 20:
+            raise ValueError(f"breadth must be between 1 and 20, got {self.breadth}")
+        if self.max_sources < 1 or self.max_sources > 100:
+            raise ValueError(f"max_sources must be between 1 and 100, got {self.max_sources}")
+        if not 0.0 <= self.temperature <= 2.0:
+            raise ValueError(f"temperature must be between 0.0 and 2.0, got {self.temperature}")
+        if self.output_format not in VALID_FORMATS:
+            raise ValueError(
+                f"Invalid output_format '{self.output_format}'. "
+                f"Must be one of: {', '.join(sorted(VALID_FORMATS))}"
+            )
+        if self.search_provider not in VALID_SEARCH_PROVIDERS:
+            raise ValueError(
+                f"Invalid search_provider '{self.search_provider}'. "
+                f"Must be one of: {', '.join(sorted(VALID_SEARCH_PROVIDERS))}"
+            )
+        if self.search_max_results < 1 or self.search_max_results > 50:
+            raise ValueError(
+                f"search_max_results must be between 1 and 50, got {self.search_max_results}"
+            )
+        if self.max_requests_per_minute < 1:
+            raise ValueError(
+                f"max_requests_per_minute must be >= 1, got {self.max_requests_per_minute}"
+            )
+        if self.timeout_seconds < 0:
+            raise ValueError(
+                f"timeout_seconds must be >= 0, got {self.timeout_seconds}"
+            )
 
     @classmethod
     def auto(cls) -> "Config":

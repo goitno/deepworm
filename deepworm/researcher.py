@@ -32,7 +32,7 @@ from .languages import get_language_instruction
 from .plugins import PluginManager
 from .search import SearchResult, fetch_page_text, search_web
 from .session import save_session
-from .utils import ContentDeduplicator
+from .utils import ContentDeduplicator, RateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +149,10 @@ class DeepResearcher:
         self.events = events or EventEmitter()
         self.plugins = plugins or PluginManager()
         self._dedup = ContentDeduplicator(threshold=0.7)
+        self._rate_limiter = RateLimiter(
+            max_calls=self.config.max_requests_per_minute,
+            period=60.0,
+        )
 
     def _progress(self, msg: str) -> None:
         if self._on_progress:
@@ -177,6 +181,22 @@ class DeepResearcher:
         if self.client is None:
             self.client = get_client(self.config)
         return self.client
+
+    def _llm_call(self, llm: LLMClient, method: str, *args, **kwargs):
+        """Rate-limited LLM call."""
+        self._rate_limiter.acquire()
+        fn = getattr(llm, method)
+        return fn(*args, **kwargs)
+
+    def _check_timeout(self) -> bool:
+        """Check if research has exceeded the time budget.
+
+        Returns True if timed out.
+        """
+        if self.config.timeout_seconds <= 0:
+            return False
+        elapsed = time.time() - getattr(self, "_session_start", time.time())
+        return elapsed >= self.config.timeout_seconds
 
     def research(self, topic: str, verbose: bool = True, persona: str | None = None, stream: bool = False, followup: bool = True, lang: str | None = None) -> str:
         """Run deep research on a topic and return a markdown report.
@@ -225,6 +245,12 @@ class DeepResearcher:
         for i in range(self.config.depth):
             state.iterations_done = i + 1
             t_iter = time.time()
+
+            # Check timeout
+            if self._check_timeout():
+                if verbose:
+                    console.print("[yellow]Time budget exceeded, moving to synthesis...[/yellow]")
+                break
 
             if verbose:
                 console.print(f"\n[bold cyan]--- Iteration {i + 1}/{self.config.depth} ---[/bold cyan]")
@@ -457,18 +483,28 @@ class DeepResearcher:
         sources: list[Source] = []
         urls_to_fetch: list[SearchResult] = []
 
-        # Collect unique URLs from all queries
-        for query in queries:
-            results = search_web(
+        # Search queries concurrently
+        def _search_query(query: str) -> list[SearchResult]:
+            return search_web(
                 query,
                 max_results=self.config.max_sources,
                 cache=self.cache,
                 provider=self.config.search_provider,
             )
-            for r in results:
-                if r.url not in seen_urls:
-                    seen_urls.add(r.url)
-                    urls_to_fetch.append(r)
+
+        search_workers = min(4, len(queries))
+        if search_workers > 0:
+            with ThreadPoolExecutor(max_workers=search_workers) as executor:
+                futures = {executor.submit(_search_query, q): q for q in queries}
+                for future in as_completed(futures):
+                    try:
+                        results = future.result()
+                        for r in results:
+                            if r.url not in seen_urls:
+                                seen_urls.add(r.url)
+                                urls_to_fetch.append(r)
+                    except Exception:
+                        pass
 
         # Fetch pages concurrently
         def _fetch(result: SearchResult) -> Source:

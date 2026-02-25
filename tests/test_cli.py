@@ -97,3 +97,34 @@ def test_copy_to_clipboard_runs(monkeypatch):
     _copy_to_clipboard("test report")
     assert len(calls) == 1
     assert b"test report" in calls[0]
+
+
+def test_parser_score_flag():
+    parser = build_parser()
+    args = parser.parse_args(["topic", "--score"])
+    assert args.score is True
+
+
+def test_parser_sections_flag():
+    parser = build_parser()
+    args = parser.parse_args(["topic", "--sections", "Summary|Findings"])
+    assert args.sections == "Summary|Findings"
+
+
+def test_parser_timeout_flag():
+    parser = build_parser()
+    args = parser.parse_args(["topic", "--timeout", "120"])
+    assert args.timeout == 120
+
+
+def test_parser_diff_flag():
+    parser = build_parser()
+    args = parser.parse_args(["--diff", "old.md", "new.md"])
+    assert args.diff == ["old.md", "new.md"]
+
+
+def test_parser_toc_and_stats():
+    parser = build_parser()
+    args = parser.parse_args(["topic", "--toc", "--stats"])
+    assert args.toc is True
+    assert args.stats is True

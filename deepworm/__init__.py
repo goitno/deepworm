@@ -22,6 +22,7 @@ from .exceptions import (
 from .history import HistoryEntry
 from .languages import Language, get_language, list_languages
 from .researcher import DeepResearcher
+from .scoring import QualityScore, score_report
 
 __all__ = [
     "APIKeyError",
@@ -38,6 +39,7 @@ __all__ = [
     "ModelNotFoundError",
     "NetworkError",
     "ProviderError",
+    "QualityScore",
     "RateLimitError",
     "SearchError",
     "SessionError",
@@ -47,6 +49,7 @@ __all__ = [
     "list_languages",
     "research",
     "research_chain",
+    "score_report",
 ]
 
 # Set up default logging (NullHandler to avoid "No handlers" warnings)
