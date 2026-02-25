@@ -7,7 +7,11 @@
 AI deep research tool that searches the web, reads sources, and synthesizes findings into comprehensive reports.
 
 <p align="center">
-  <img src="demo.gif" alt="deepworm demo" width="800">
+  <video src="https://github.com/bysiber/deepworm/raw/main/demo.mp4" width="800" autoplay loop muted playsinline></video>
+</p>
+
+<p align="center">
+  <a href="https://github.com/bysiber/deepworm/raw/main/demo.mp4">▶️ Watch demo video</a>
 </p>
 
 **Works 100% free** with Ollama (local LLM) + DuckDuckGo (no API key needed for search). Also supports OpenAI, Google Gemini, Anthropic Claude, and [OpenRouter](https://openrouter.ai/) (200+ models).
