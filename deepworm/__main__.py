@@ -605,17 +605,9 @@ def main(args: list[str] | None = None) -> None:
             sys.exit(1)
 
     if opts.topic is None:
-        # Interactive mode
-        console.print("[bold]deepworm[/bold] - AI deep research agent\n")
-        try:
-            topic = console.input("[bold cyan]What do you want to research?[/bold cyan] ")
-        except (KeyboardInterrupt, EOFError):
-            console.print("\nBye!")
-            return
-        if not topic.strip():
-            console.print("[red]No topic provided.[/red]")
-            return
-        opts.topic = topic.strip()
+        # Interactive mode — Claude Code style
+        _interactive_shell(opts, config, cache)
+        return
 
     # Validate topic
     from .validator import validate_topic
@@ -946,6 +938,423 @@ def main(args: list[str] | None = None) -> None:
     # Interactive Q&A mode
     if opts.interactive:
         _interactive_qa(config, report, opts.topic, cache)
+
+
+def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> None:
+    """Interactive CLI shell — Claude Code style experience."""
+    import time as _time
+
+    # Detect provider info
+    provider_info = f"{config.provider}/{config.model}"
+
+    # Welcome banner
+    console.print()
+    console.print(Panel(
+        f"[bold]deepworm[/bold] v{__version__}\n\n"
+        f"AI-powered deep research agent\n"
+        f"Provider: [cyan]{provider_info}[/cyan]",
+        border_style="blue",
+        expand=False,
+    ))
+    console.print()
+    console.print("  [dim]Type a topic to research, or use a command:[/dim]")
+    console.print()
+    console.print("  [cyan]/help[/cyan]        Show all commands")
+    console.print("  [cyan]/compare[/cyan]     Compare multiple topics")
+    console.print("  [cyan]/polish[/cyan]      Analyze a report file")
+    console.print("  [cyan]/graph[/cyan]       Extract knowledge graph")
+    console.print("  [cyan]/config[/cyan]      Show current configuration")
+    console.print("  [cyan]/models[/cyan]      List available models")
+    console.print("  [cyan]/history[/cyan]     Show research history")
+    console.print("  [cyan]/exit[/cyan]        Exit deepworm")
+    console.print()
+
+    total_tokens = 0
+    session_start = _time.time()
+    researches_done = 0
+
+    while True:
+        try:
+            # Prompt with token count if any work was done
+            if total_tokens > 0:
+                elapsed = _time.time() - session_start
+                prompt_text = f"[bold blue]deepworm[/bold blue] [dim]({total_tokens:,} tokens | {elapsed:.0f}s)[/dim] > "
+            else:
+                prompt_text = "[bold blue]deepworm[/bold blue] > "
+
+            user_input = console.input(prompt_text).strip()
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[dim]Goodbye![/dim]")
+            break
+
+        if not user_input:
+            continue
+
+        # --- Commands ---
+        if user_input.lower() in ("/exit", "/quit", "/q", "exit", "quit"):
+            elapsed = _time.time() - session_start
+            console.print()
+            if researches_done > 0:
+                summary = Table(show_header=False, box=None, padding=(0, 2))
+                summary.add_column(style="bold")
+                summary.add_column()
+                summary.add_row("Session", f"{elapsed:.0f}s")
+                summary.add_row("Researches", str(researches_done))
+                summary.add_row("Total tokens", f"{total_tokens:,}")
+                console.print(Panel(summary, title="[dim]Session Summary[/dim]", border_style="dim", expand=False))
+            console.print("[dim]Goodbye![/dim]")
+            break
+
+        if user_input.lower() in ("/help", "/h", "help"):
+            _show_help()
+            continue
+
+        if user_input.lower() in ("/config", "/cfg"):
+            _show_config(config)
+            continue
+
+        if user_input.lower() in ("/history", "/hist"):
+            _show_history_interactive()
+            continue
+
+        if user_input.lower() in ("/models",):
+            _show_models(config)
+            continue
+
+        if user_input.lower().startswith("/compare"):
+            parts = user_input.split(maxsplit=1)
+            if len(parts) < 2:
+                console.print("[dim]Usage: /compare topic1, topic2, topic3[/dim]")
+                continue
+            topics = [t.strip().strip("'\"") for t in parts[1].split(",")]
+            if len(topics) < 2:
+                console.print("[yellow]Need at least 2 topics to compare.[/yellow]")
+                continue
+            console.print(f"[dim]Comparing: {', '.join(topics)}[/dim]")
+            try:
+                from .compare import compare
+                report = compare(topics, config=config, verbose=True)
+                from .report import print_report
+                print_report(report)
+                researches_done += 1
+            except KeyboardInterrupt:
+                console.print("\n[yellow]Comparison interrupted.[/yellow]")
+            except Exception as e:
+                console.print(f"[red]Error: {e}[/red]")
+            continue
+
+        if user_input.lower().startswith("/polish"):
+            parts = user_input.split(maxsplit=1)
+            if len(parts) < 2:
+                console.print("[dim]Usage: /polish <file.md>[/dim]")
+                continue
+            filepath = parts[1].strip()
+            try:
+                text = open(filepath, encoding="utf-8").read()
+            except FileNotFoundError:
+                console.print(f"[red]File not found: {filepath}[/red]")
+                continue
+            _run_polish_inline(text)
+            continue
+
+        if user_input.lower().startswith("/graph"):
+            parts = user_input.split(maxsplit=1)
+            if len(parts) < 2:
+                console.print("[dim]Usage: /graph <file.md>[/dim]")
+                continue
+            filepath = parts[1].strip()
+            try:
+                text = open(filepath, encoding="utf-8").read()
+            except FileNotFoundError:
+                console.print(f"[red]File not found: {filepath}[/red]")
+                continue
+            _run_graph_inline(text)
+            continue
+
+        if user_input.startswith("/"):
+            console.print(f"[yellow]Unknown command: {user_input.split()[0]}[/yellow]")
+            console.print("[dim]Type /help for available commands[/dim]")
+            continue
+
+        # --- Research mode ---
+        topic = user_input
+
+        # Check for inline flags
+        research_depth = config.depth
+        research_breadth = config.breadth
+        do_polish = False
+        do_graph = False
+        output_file = None
+
+        # Parse simple inline options from the topic
+        words = topic.split()
+        filtered_words = []
+        i = 0
+        while i < len(words):
+            w = words[i]
+            if w == "--polish":
+                do_polish = True
+            elif w == "--graph":
+                do_graph = True
+            elif w in ("-d", "--depth") and i + 1 < len(words):
+                try:
+                    research_depth = int(words[i + 1])
+                    i += 1
+                except ValueError:
+                    filtered_words.append(w)
+            elif w in ("-b", "--breadth") and i + 1 < len(words):
+                try:
+                    research_breadth = int(words[i + 1])
+                    i += 1
+                except ValueError:
+                    filtered_words.append(w)
+            elif w in ("-o", "--output") and i + 1 < len(words):
+                output_file = words[i + 1]
+                i += 1
+            else:
+                filtered_words.append(w)
+            i += 1
+        topic = " ".join(filtered_words)
+
+        if not topic:
+            console.print("[yellow]Please provide a topic.[/yellow]")
+            continue
+
+        # Validate
+        from .validator import validate_topic
+        validation = validate_topic(topic)
+        if not validation.is_valid:
+            console.print(f"[red]Invalid topic:[/red] {validation.error}")
+            continue
+        topic = validation.topic
+
+        # Run research
+        researcher = DeepResearcher(config=config, cache=cache)
+        # Override depth/breadth for this research
+        researcher.config = Config(**{
+            **config.__dict__,
+            "depth": research_depth,
+            "breadth": research_breadth,
+        })
+
+        try:
+            console.print()
+            report = researcher.research(topic, verbose=True, followup=True)
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Research interrupted.[/yellow]")
+            continue
+        except Exception as e:
+            from .exceptions import DeepWormError
+            if isinstance(e, DeepWormError):
+                console.print(f"[red]Error:[/red] {e}")
+                if e.hint:
+                    console.print(f"[dim]  Hint: {e.hint}[/dim]")
+            else:
+                console.print(f"[red]Error:[/red] {e}")
+            continue
+
+        researches_done += 1
+
+        # Track tokens from this research
+        tracker = getattr(researcher, "last_token_tracker", None)
+        if tracker:
+            total_tokens += tracker.total_tokens
+
+        # Output report
+        if output_file:
+            from .report import save_report
+            path = save_report(report, output_file, topic=topic)
+            console.print(f"[green]Report saved to {path}[/green]")
+        else:
+            from .report import print_report
+            print_report(report)
+
+        # Polish if requested
+        if do_polish:
+            _run_polish_inline(report)
+
+        # Graph if requested
+        if do_graph:
+            _run_graph_inline(report, topic=topic)
+
+        console.print()
+
+
+def _show_help() -> None:
+    """Show interactive help."""
+    console.print()
+    console.print(Panel("[bold]Commands[/bold]", border_style="cyan", expand=False))
+    console.print()
+
+    cmds = Table(show_header=False, box=None, padding=(0, 2))
+    cmds.add_column(style="cyan", min_width=20)
+    cmds.add_column(style="dim")
+    cmds.add_row("/help", "Show this help")
+    cmds.add_row("/compare t1, t2, t3", "Compare multiple topics")
+    cmds.add_row("/polish file.md", "Run polish pipeline on a file")
+    cmds.add_row("/graph file.md", "Extract knowledge graph from a file")
+    cmds.add_row("/config", "Show current configuration")
+    cmds.add_row("/models", "List available models")
+    cmds.add_row("/history", "Show research history")
+    cmds.add_row("/exit", "Exit deepworm")
+    console.print(cmds)
+
+    console.print("\n  [bold]Research with inline flags:[/bold]")
+    console.print("  [dim]bitcoin price 2027 -d 2 -b 3 --polish --graph[/dim]")
+    console.print("  [dim]AI safety --output report.md --polish[/dim]")
+    console.print()
+
+    console.print("  [bold]Examples:[/bold]")
+    console.print("  [dim]> What is WebAssembly and why does it matter?[/dim]")
+    console.print("  [dim]> /compare React, Vue, Svelte[/dim]")
+    console.print("  [dim]> /polish ./my-report.md[/dim]")
+    console.print()
+
+
+def _show_config(config: "Config") -> None:
+    """Show current configuration."""
+    tbl = Table(show_header=False, box=None, padding=(0, 2))
+    tbl.add_column(style="bold")
+    tbl.add_column()
+    tbl.add_row("Provider", config.provider)
+    tbl.add_row("Model", config.model)
+    tbl.add_row("Depth", str(config.depth))
+    tbl.add_row("Breadth", str(config.breadth))
+    tbl.add_row("Search", config.search_provider)
+    tbl.add_row("Timeout", f"{config.timeout_seconds}s" if config.timeout_seconds > 0 else "unlimited")
+    console.print()
+    console.print(Panel(tbl, title="[bold]Configuration[/bold]", border_style="cyan", expand=False))
+    console.print()
+
+
+def _show_history_interactive() -> None:
+    """Show research history in interactive mode."""
+    from .history import list_entries
+    entries = list_entries(limit=10)
+    if not entries:
+        console.print("[dim]No research history yet.[/dim]")
+        return
+    console.print()
+    tbl = Table(title="Recent Research", header_style="bold", padding=(0, 1))
+    tbl.add_column("Date", style="cyan", max_width=19)
+    tbl.add_column("Topic", max_width=50)
+    tbl.add_column("Model", style="dim")
+    tbl.add_column("Sources", justify="right")
+    tbl.add_column("Time", justify="right")
+    for e in entries:
+        tbl.add_row(
+            e.created_iso[:19],
+            e.topic[:50],
+            f"{e.provider}/{e.model}",
+            str(e.total_sources),
+            f"{e.elapsed_seconds:.0f}s",
+        )
+    console.print(tbl)
+    console.print()
+
+
+def _show_models(config: "Config") -> None:
+    """Show available models for current provider."""
+    console.print()
+    models = {
+        "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
+        "anthropic": ["claude-sonnet-4-20250514", "claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"],
+        "google": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-3-flash-preview"],
+        "ollama": ["llama3.1", "mistral", "codellama", "phi3"],
+    }
+    tbl = Table(title="Available Models", header_style="bold", padding=(0, 1))
+    tbl.add_column("Provider", style="cyan")
+    tbl.add_column("Models")
+    tbl.add_column("", style="dim")
+    for provider, model_list in models.items():
+        is_current = provider == config.provider
+        marker = "[green]active[/green]" if is_current else ""
+        tbl.add_row(provider, ", ".join(model_list), marker)
+    console.print(tbl)
+    console.print(f"\n  [dim]Current: {config.provider}/{config.model}[/dim]")
+    console.print()
+
+
+def _run_polish_inline(text: str, topic: str = "") -> None:
+    """Run polish pipeline inline in interactive mode."""
+    from .readability import analyze_readability
+    from .compliance import check_compliance
+    from .scoring import score_report as _score
+    from .annotations import auto_annotate
+
+    console.print()
+    console.print(Panel("[bold]Polish Pipeline[/bold]", border_style="cyan", expand=False))
+    console.print()
+
+    ra = analyze_readability(text)
+    cr = check_compliance(text)
+    qs = _score(text)
+    anns = auto_annotate(text)
+
+    r_color = "green" if ra.flesch_reading_ease >= 60 else ("yellow" if ra.flesch_reading_ease >= 30 else "red")
+    grade_color = "green" if qs.overall >= 0.8 else ("yellow" if qs.overall >= 0.6 else "red")
+
+    console.print(f"  [bold]1.[/bold] Readability   [{r_color}]{ra.reading_level}[/{r_color}] (Flesch {ra.flesch_reading_ease:.0f})")
+    console.print(f"  [bold]2.[/bold] Compliance   {'[green]PASS[/green]' if cr.is_compliant else '[red]FAIL[/red]'} ({cr.score:.0f}/100)")
+    console.print(f"  [bold]3.[/bold] Quality      [{grade_color}]{qs.grade}[/{grade_color}] ({qs.overall:.0%})")
+
+    dims = [("Structure", qs.structure), ("Depth", qs.depth), ("Sources", qs.sources),
+            ("Readability", qs.readability), ("Complete", qs.completeness)]
+    for name, val in dims:
+        bar_len = int(val * 20)
+        bar = "\u2588" * bar_len + "\u2591" * (20 - bar_len)
+        bar_color = "green" if val >= 0.8 else ("yellow" if val >= 0.6 else "red")
+        console.print(f"     {name:<12} [{bar_color}]{bar}[/{bar_color}] {val:.0%}")
+
+    ann_count = len(anns.annotations)
+    if ann_count > 0:
+        console.print(f"  [bold]4.[/bold] Annotations  [yellow]{ann_count} findings[/yellow]")
+        for a in anns.annotations[:5]:
+            type_color = {"fact_check": "red", "warning": "yellow", "question": "cyan", "todo": "magenta"}
+            color = type_color.get(a.annotation_type.value, "dim")
+            console.print(f"     [{color}]\u2022 [{a.annotation_type.value}] {a.text}[/{color}]")
+    else:
+        console.print(f"  [bold]4.[/bold] Annotations  [green]No issues[/green]")
+    console.print()
+
+
+def _run_graph_inline(text: str, topic: str = "report") -> None:
+    """Run graph extraction inline in interactive mode."""
+    from .graph import extract_concept_graph, extract_link_graph, merge_graphs
+
+    console.print()
+    console.print(Panel("[bold]Knowledge Graph[/bold]", border_style="cyan", expand=False))
+    console.print()
+
+    cg = extract_concept_graph(text)
+    lg = extract_link_graph(text)
+    graph = merge_graphs(cg, lg)
+    graph.name = topic
+    gs = graph.stats()
+
+    stats_tbl = Table(show_header=False, box=None, padding=(0, 2))
+    stats_tbl.add_column(style="bold")
+    stats_tbl.add_column()
+    stats_tbl.add_row("Nodes", str(gs.node_count))
+    stats_tbl.add_row("Edges", str(gs.edge_count))
+    stats_tbl.add_row("Components", str(gs.components))
+    stats_tbl.add_row("Density", f"{gs.density:.3f}")
+    console.print(stats_tbl)
+
+    if graph.nodes:
+        node_degrees = sorted(
+            [(n, graph.degree(n.node_id)) for n in graph.nodes],
+            key=lambda x: x[1], reverse=True
+        )
+        console.print()
+        top_tbl = Table(title="Top Nodes", header_style="bold", padding=(0, 1))
+        top_tbl.add_column("Node", style="cyan", max_width=40)
+        top_tbl.add_column("Degree", justify="right")
+        top_tbl.add_column("", style="green")
+        for node, deg in node_degrees[:8]:
+            top_tbl.add_row(node.label[:40], str(deg), "#" * deg)
+        console.print(top_tbl)
+    console.print()
 
 
 def _copy_to_clipboard(text: str) -> None:

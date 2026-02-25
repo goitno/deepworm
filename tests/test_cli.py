@@ -177,3 +177,39 @@ def test_parser_polish_and_graph_combined():
     args = parser.parse_args(["topic", "--polish", "--graph", "stats"])
     assert args.polish is True
     assert args.graph == "stats"
+
+
+def test_interactive_shell_help_function():
+    """Test that _show_help runs without error."""
+    from deepworm.__main__ import _show_help
+    _show_help()  # Should not raise
+
+
+def test_interactive_shell_config_function():
+    """Test that _show_config runs without error."""
+    from deepworm.__main__ import _show_config
+    from deepworm.config import Config
+    config = Config.auto()
+    _show_config(config)  # Should not raise
+
+
+def test_interactive_shell_models_function():
+    """Test that _show_models runs without error."""
+    from deepworm.__main__ import _show_models
+    from deepworm.config import Config
+    config = Config.auto()
+    _show_models(config)  # Should not raise
+
+
+def test_interactive_polish_inline():
+    """Test that _run_polish_inline runs without error."""
+    from deepworm.__main__ import _run_polish_inline
+    sample = "# Title\n\n## Intro\n\nSome text here.\n\n## Sources\n\n1. [x](http://x.com)\n"
+    _run_polish_inline(sample)  # Should not raise
+
+
+def test_interactive_graph_inline():
+    """Test that _run_graph_inline runs without error."""
+    from deepworm.__main__ import _run_graph_inline
+    sample = "# Title\n\n## Intro\n\nSome text here.\n\n## Sources\n\n1. [x](http://x.com)\n"
+    _run_graph_inline(sample)  # Should not raise
