@@ -1256,6 +1256,8 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
     total_tokens = 0
     session_start = _time.time()
     researches_done = 0
+    last_report: str | None = None   # Keep last report for /graph, /polish
+    last_report_file: str | None = None  # Path to last saved report
 
     # Menu items shown above the prompt
     _MENU = [
@@ -1431,7 +1433,11 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
         if cmd_lower.startswith("/polish"):
             parts = user_input.split(maxsplit=1)
             if len(parts) < 2:
-                console.print("[dim]Usage: /polish <file.md>[/dim]")
+                # Use last report if available
+                if last_report:
+                    _run_polish_inline(last_report)
+                else:
+                    console.print("[dim]Usage: /polish <file.md>  (or run a research first)[/dim]")
                 continue
             filepath = parts[1].strip()
             try:
@@ -1445,7 +1451,10 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
         if cmd_lower.startswith("/graph"):
             parts = user_input.split(maxsplit=1)
             if len(parts) < 2:
-                console.print("[dim]Usage: /graph <file.md>[/dim]")
+                if last_report:
+                    _run_graph_inline(last_report)
+                else:
+                    console.print("[dim]Usage: /graph <file.md>  (or run a research first)[/dim]")
                 continue
             filepath = parts[1].strip()
             try:
@@ -1454,6 +1463,16 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
                 console.print(f"[red]File not found: {filepath}[/red]")
                 continue
             _run_graph_inline(text)
+            continue
+
+        if cmd_lower in ("/last",):
+            if last_report:
+                from .report import print_report
+                print_report(last_report)
+                if last_report_file:
+                    console.print(f"  [dim]📄 File: {last_report_file}[/dim]")
+            else:
+                console.print("[dim]No research done yet.[/dim]")
             continue
 
         if user_input.startswith("/"):
@@ -1539,20 +1558,36 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
             continue
 
         researches_done += 1
+        last_report = report
 
         # Track tokens from this research
         tracker = getattr(researcher, "last_token_tracker", None)
         if tracker:
             total_tokens += tracker.total_tokens
 
+        # Auto-save report to file
+        import re as _re
+        slug = _re.sub(r'[^\w\s-]', '', topic).strip()[:50]
+        slug = _re.sub(r'[\s]+', '_', slug).lower()
+        timestamp = _time.strftime("%Y%m%d_%H%M%S")
+        reports_dir = os.path.expanduser("~/.deepworm/reports")
+        os.makedirs(reports_dir, exist_ok=True)
+        auto_path = os.path.join(reports_dir, f"{slug}_{timestamp}.md")
+        with open(auto_path, "w", encoding="utf-8") as _f:
+            _f.write(report)
+        last_report_file = auto_path
+
         # Output report
         if output_file:
             from .report import save_report
             path = save_report(report, output_file, topic=topic)
-            console.print(f"[green]Report saved to {path}[/green]")
+            console.print(f"[green]✓ Report saved to {path}[/green]")
         else:
             from .report import print_report
             print_report(report)
+
+        console.print(f"  [dim]📄 Auto-saved: {auto_path}[/dim]")
+        console.print(f"  [dim]💡 Use /graph or /polish on this report, or /last to view it[/dim]")
 
         # Polish if requested
         if do_polish:
