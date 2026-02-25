@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 
 from rich.console import Console
@@ -69,6 +70,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help="Save report to file (default: print to stdout)",
+    )
+    parser.add_argument(
+        "--format", "-f",
+        type=str,
+        choices=["markdown", "html", "text", "json"],
+        default=None,
+        help="Output format when saving to file (auto-detected from extension)",
     )
     parser.add_argument(
         "--quiet", "-q",
@@ -199,7 +207,13 @@ def _output_report(report: str, opts: argparse.Namespace) -> None:
             result["topics"] = opts.compare
         print(json.dumps(result, indent=2))
     elif opts.output:
-        path = save_report(report, opts.output, topic=topic)
+        # Auto-detect format from extension if not specified
+        fmt = opts.format
+        if fmt is None:
+            ext_map = {".html": "html", ".htm": "html", ".txt": "text", ".json": "json"}
+            ext = os.path.splitext(opts.output)[1].lower()
+            fmt = ext_map.get(ext, "markdown")
+        path = save_report(report, opts.output, topic=topic, fmt=fmt)
         console.print(f"\n[green]Report saved to {path}[/green]")
     else:
         print_report(report)
