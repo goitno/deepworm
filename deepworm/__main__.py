@@ -1666,6 +1666,7 @@ def _show_models_interactive(config: "Config") -> None:
         "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
         "anthropic": ["claude-sonnet-4-20250514", "claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"],
         "google": ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-3-flash-preview"],
+        "openrouter": ["google/gemini-2.0-flash-exp:free", "google/gemini-2.5-flash-preview-05-20", "meta-llama/llama-3.1-8b-instruct:free", "microsoft/phi-3-mini-128k-instruct:free", "deepseek/deepseek-r1:free"],
         "ollama": ["llama3.2", "llama3.1", "mistral", "codellama", "phi3", "qwen2.5"],
     }
 
@@ -1706,7 +1707,7 @@ def _handle_set_command(user_input: str, config: "Config") -> None:
     value = parts[2].strip()
 
     if key == "provider":
-        valid = ("openai", "anthropic", "google", "ollama")
+        valid = ("openai", "anthropic", "google", "openrouter", "ollama")
         if value not in valid:
             console.print(f"  [yellow]Valid providers: {', '.join(valid)}[/yellow]")
             return

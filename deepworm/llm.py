@@ -133,10 +133,22 @@ def get_client(config: Config) -> "LLMClient":
                 hint="Set GOOGLE_API_KEY environment variable or add api_key to config file",
             )
         return GoogleClient(api_key=api_key, model=config.model)
+    elif provider == "openrouter":
+        api_key = config.api_key or os.environ.get("OPENROUTER_API_KEY", "")
+        if not api_key:
+            raise APIKeyError(
+                "OpenRouter API key not found",
+                hint="Set OPENROUTER_API_KEY environment variable or add api_key to config file",
+            )
+        return OpenAICompatibleClient(
+            api_key=api_key,
+            base_url=config.base_url or "https://openrouter.ai/api/v1",
+            model=config.model,
+        )
     else:
         raise ProviderError(
             f"Unknown provider: {provider}",
-            hint="Supported providers: openai, anthropic, google, ollama",
+            hint="Supported providers: openai, anthropic, google, openrouter, ollama",
         )
 
 

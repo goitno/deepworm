@@ -79,7 +79,11 @@ class Config:
 
     def _detect_provider(self):
         """Auto-detect provider from environment variables."""
-        if os.getenv("OPENAI_API_KEY"):
+        if os.getenv("OPENROUTER_API_KEY"):
+            self.provider = "openrouter"
+            self.api_key = os.getenv("OPENROUTER_API_KEY")
+            self.base_url = "https://openrouter.ai/api/v1"
+        elif os.getenv("OPENAI_API_KEY"):
             self.provider = "openai"
             self.api_key = os.getenv("OPENAI_API_KEY")
         elif os.getenv("ANTHROPIC_API_KEY"):
@@ -100,6 +104,7 @@ class Config:
             "openai": "gpt-4o-mini",
             "anthropic": "claude-3-5-haiku-latest",
             "google": "gemini-2.5-flash-lite",
+            "openrouter": "google/gemini-2.0-flash-exp:free",
             "ollama": "llama3.2",
         }
         return defaults.get(provider or self.provider, "gpt-4o-mini")
@@ -114,7 +119,7 @@ class Config:
         Raises:
             ValueError: If any configuration value is invalid.
         """
-        VALID_PROVIDERS = {"openai", "anthropic", "google", "ollama"}
+        VALID_PROVIDERS = {"openai", "anthropic", "google", "openrouter", "ollama"}
         VALID_FORMATS = {"markdown", "html", "text", "json", "pdf"}
         VALID_SEARCH_PROVIDERS = {"duckduckgo", "brave", "searxng"}
 

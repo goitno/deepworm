@@ -9,7 +9,7 @@ from deepworm.config import Config, _load_config_file, _load_env_overrides, _par
 def test_default_config():
     """Config should auto-detect provider."""
     config = Config.auto()
-    assert config.provider in ("openai", "anthropic", "google", "ollama")
+    assert config.provider in ("openai", "anthropic", "google", "openrouter", "ollama")
     assert config.model is not None
     assert config.depth == 1
     assert config.breadth == 1
