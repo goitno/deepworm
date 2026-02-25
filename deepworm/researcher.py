@@ -49,49 +49,62 @@ class ResearchState:
     iterations_done: int = 0
 
 
-QUERY_GENERATION_PROMPT = """You are a research assistant. Given a research topic, generate {breadth} diverse search queries that would help thoroughly research this topic from different angles.
+QUERY_GENERATION_PROMPT = """Given a research topic, generate {breadth} search queries that would help build a comprehensive understanding. Each query should target a different angle or aspect.
 
 Topic: {topic}
 
 {context}
 
-Return a JSON array of strings, nothing else. Example: ["query 1", "query 2", "query 3"]"""
+Return a JSON array of search query strings. Queries should be specific enough to find relevant results but diverse enough to cover the topic broadly. Example format: ["query 1", "query 2"]"""
 
-FOLLOWUP_QUERY_PROMPT = """You are a research assistant. Based on the research so far, identify knowledge gaps and generate {breadth} follow-up search queries.
+FOLLOWUP_QUERY_PROMPT = """Based on research findings so far, identify what's still unknown or unclear and generate {breadth} targeted follow-up queries.
 
 Original topic: {topic}
 
-What we know so far:
+Current findings:
 {findings_summary}
 
-What gaps remain or what aspects need deeper investigation? Return a JSON array of search query strings, nothing else."""
+Focus on: gaps in understanding, conflicting claims that need verification, specific details missing from the overview, and emerging sub-topics worth exploring. Return a JSON array of search query strings."""
 
-ANALYSIS_PROMPT = """You are a research analyst. Analyze the following source material and extract key findings relevant to the research topic.
+ANALYSIS_PROMPT = """Extract key findings from this source that are relevant to the research topic.
 
-Research topic: {topic}
+Topic: {topic}
 
-Source: {title} ({url})
+Source: {title}
+URL: {url}
 Content:
 {content}
 
-Provide a concise analysis (3-5 bullet points) of the key findings from this source that are relevant to the research topic. Focus on facts, data, and unique insights."""
+Provide a concise analysis with:
+- Key facts, statistics, and data points
+- Notable claims or arguments
+- Unique perspectives not commonly found elsewhere
+- Any caveats or limitations mentioned
 
-SYNTHESIS_PROMPT = """You are an expert research analyst. Synthesize the following research findings into a comprehensive, well-structured report.
+Use bullet points. Be precise and factual."""
+
+SYNTHESIS_PROMPT = """Write a comprehensive research report based on the following findings.
 
 Research topic: {topic}
 
-Sources and findings:
+Sources and analysis:
 {all_findings}
 
-Write a detailed research report in Markdown format. The report should:
-1. Start with a clear title and executive summary
-2. Organize findings into logical sections with headers
-3. Include specific facts, data points, and insights
-4. Note any conflicting information or areas of uncertainty
-5. End with key takeaways and conclusions
-6. Include a Sources section at the end listing all URLs
+Structure the report as:
+1. Title (# heading)
+2. Executive Summary (2-3 paragraph overview)
+3. Main sections organized by theme (## headings)
+4. Key Takeaways (bulleted list)
+5. Sources (numbered list of URLs)
 
-Write the report directly, no preamble. Make it thorough but readable."""
+Guidelines:
+- Lead with the most important findings
+- Include specific numbers, dates, and facts when available
+- Note disagreements between sources
+- Distinguish between established facts and emerging trends
+- Write in clear, professional prose
+
+Output the report in Markdown format."""
 
 
 class DeepResearcher:
