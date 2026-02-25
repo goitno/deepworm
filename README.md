@@ -125,6 +125,7 @@ deepworm "topic" -m gpt-4o                          # use specific model
 deepworm "topic" -p ollama                          # force Ollama provider
 deepworm "topic" -o report.md                       # save to file
 deepworm "topic" -o report.html                     # save as HTML (dark mode)
+deepworm "topic" -o report.pdf                      # save as PDF
 deepworm "topic" -f html                            # force HTML format
 deepworm "topic" -q                                 # quiet mode
 deepworm "topic" --json                             # JSON output for piping
@@ -132,7 +133,25 @@ deepworm "topic" --stream                           # stream report as it genera
 deepworm "topic" --persona "startup founder"        # research perspective
 deepworm "topic" --no-cache                         # skip disk cache
 deepworm "topic" --search-provider brave            # use Brave Search
+deepworm "topic" -t academic                        # use template preset
+deepworm "topic" --lang tr                          # output in Turkish
+deepworm "topic" --lang ja                          # output in Japanese
+deepworm "topic" -i                                 # interactive Q&A after research
+deepworm "topic" --copy                             # copy report to clipboard
+deepworm "topic" --chain 3                          # 3-step progressive deep dive
+deepworm "topic" --no-followup                      # don't generate follow-up questions
+deepworm "topic" --export-sources sources.json      # export sources as JSON
+deepworm "topic" --export-sources sources.csv       # export sources as CSV
+deepworm "topic" --export-sources refs.bib          # export sources as BibTeX
+deepworm "topic" --profile myconfig                 # use saved config profile
 deepworm --compare "React" "Vue" "Svelte"           # compare topics
+deepworm --save-profile myconfig                    # save current config as profile
+deepworm --list-profiles                            # show saved profiles
+deepworm --delete-profile myconfig                  # remove a profile
+deepworm --list-templates                           # show research templates
+deepworm --list-languages                           # show supported languages
+deepworm --serve                                    # start web UI (port 8888)
+deepworm --serve 3000                               # start web UI on port 3000
 deepworm --clear-cache                              # clear cached data
 deepworm --history                                  # show last 10 researches
 deepworm --history 20                               # show last 20 researches
@@ -300,6 +319,38 @@ results = search_history("quantum")
 print(stats())  # total researches, avg time, models used, etc.
 ```
 
+### Research Chaining
+
+```python
+from deepworm import research_chain
+
+# 3-step progressive deep dive
+report = research_chain("AI in healthcare", steps=3)
+```
+
+### Multi-Language
+
+```python
+from deepworm import DeepResearcher
+
+researcher = DeepResearcher()
+report = researcher.research("quantum computing", lang="tr")  # Turkish output
+```
+
+### Source Export
+
+```python
+from deepworm.sources import export_sources, import_sources
+
+# Export after research
+sources = [{"url": "https://...", "title": "...", "findings": "...", "relevance": 0.9}]
+export_sources(sources, "refs.bib")  # BibTeX
+export_sources(sources, "sources.csv")  # CSV
+
+# Re-import
+sources = import_sources("sources.json")
+```
+
 ## vs. gpt-researcher
 
 | | deepworm | gpt-researcher |
@@ -315,10 +366,16 @@ print(stats())  # total researches, avg time, models used, etc.
 | Async API | Built-in `AsyncResearcher` | Async by default |
 | Citations | APA, MLA, Chicago, BibTeX | No |
 | Research history | Persistent JSONL log | No |
+| Multi-language | 17 languages (`--lang`) | No |
+| Interactive Q&A | Post-research follow-up (`-i`) | No |
+| Research chaining | Progressive deep-dive (`--chain`) | No |
+| Config profiles | Save/load configs (`--profile`) | No |
+| Source export | JSON, CSV, BibTeX | No |
+| Templates | 10 built-in presets | No |
+| Web UI | Built-in (`--serve`) | Yes |
 | Search providers | 3 (DDG, Brave, SearXNG) | 5+ |
 | Dependencies | 3 packages | 30+ packages |
-| Lines of code | ~1,500 | ~10,000+ |
-| Web UI | No (CLI-first) | Yes |
+| Lines of code | ~2,500 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -326,13 +383,22 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 
 - **Iterative deep research** — search → analyze → identify gaps → dig deeper
 - **Multi-provider** — OpenAI, Anthropic, Google, or free with Ollama
+- **Multi-language** — generate reports in 17 languages (`--lang tr`, `--lang ja`, etc.)
+- **Interactive Q&A** — ask follow-up questions after research (`--interactive`)
+- **Research chaining** — progressive deep dives building on each other (`--chain`)
+- **Follow-up questions** — auto-generated questions for further exploration
 - **Plugin system** — 6 hook types for full pipeline customization
 - **Event system** — 13 event types for progress tracking and UI integration
 - **Async API** — `AsyncResearcher` for web frameworks (FastAPI, etc.)
 - **Citation formatting** — APA, MLA, Chicago, and BibTeX styles
+- **Source export** — export to JSON, CSV, or BibTeX (`--export-sources`)
 - **Research history** — persistent log with search, stats, and CLI integration
-- **HTML export** — responsive reports with automatic dark mode
+- **Config profiles** — save and reuse research configurations (`--profile`)
+- **Research templates** — 10 built-in presets (quick, deep, academic, etc.)
+- **Web UI** — built-in dark-themed web interface (`--serve`)
+- **HTML/PDF export** — responsive reports with automatic dark mode
 - **Multiple search engines** — DuckDuckGo, Brave Search, SearXNG
+- **Clipboard** — copy report to clipboard (`--copy`)
 - **Disk cache** — 24h cached search results and pages (`--no-cache` to skip)
 - **Streaming** — watch the report generate in real-time (`--stream`)
 - **Comparison mode** — research and compare multiple topics side by side
@@ -340,6 +406,7 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Session save/resume** — auto-saves state after each iteration
 - **Config file** — `deepworm.toml` or `pyproject.toml [tool.deepworm]`
 - **Source scoring** — quality heuristics prioritize better sources
+- **Content deduplication** — shingle-based near-duplicate detection
 - **Custom exceptions** — user-friendly error messages with hints
 - **Retry logic** — exponential backoff for transient failures
 - **Concurrent fetching** — parallel page downloads for speed

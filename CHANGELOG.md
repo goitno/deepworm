@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-02-25
+
+### Added
+
+- **Follow-up Questions**: Auto-generated follow-up questions appended to research reports. Disable with `--no-followup`.
+- **Interactive Mode** (`--interactive` / `-i`): Post-research Q&A loop that lets you ask follow-up questions about the report using the same LLM.
+- **Clipboard Export** (`--copy`): Copy the research report directly to your system clipboard (macOS, Linux, Windows).
+- **Multi-Language Support** (`--lang CODE`): Generate reports in 17 languages including English, Turkish, German, French, Spanish, Portuguese, Italian, Russian, Chinese, Japanese, Korean, Arabic, Hindi, Dutch, Polish, Swedish, and Ukrainian. Use `--list-languages` to see all options.
+- **Research Chaining** (`--chain N`): Run progressive deep-dive research that builds on previous findings. Each step identifies the most important sub-topic to explore next.
+- **Configuration Profiles**: Save and reuse research configurations with `--save-profile`, `--profile`, `--list-profiles`, `--delete-profile`.
+- **Source Export** (`--export-sources FILE`): Export discovered sources as JSON, CSV, or BibTeX for external citation management.
+- **Source Import**: Programmatic API to import previously exported sources.
+- New modules: `languages.py`, `chain.py`, `profiles.py`, `sources.py`
+- 203 tests (up from 154)
+
 ## [0.2.0] - 2025-01-20
 
 ### Added
