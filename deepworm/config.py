@@ -107,7 +107,7 @@ class Config:
             "openai": "gpt-4o-mini",
             "anthropic": "claude-3-5-haiku-latest",
             "google": "gemini-2.5-flash-lite",
-            "openrouter": "google/gemini-2.0-flash-exp:free",
+            "openrouter": "google/gemini-2.0-flash-001",
             "ollama": "llama3.2",
         }
         return defaults.get(provider or self.provider, "gpt-4o-mini")

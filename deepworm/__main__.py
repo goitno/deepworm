@@ -1737,7 +1737,7 @@ def _show_models_interactive(config: "Config") -> None:
         "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
         "anthropic": ["claude-sonnet-4-20250514", "claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"],
         "google": ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-3-flash-preview"],
-        "openrouter": ["google/gemini-2.0-flash-exp:free", "google/gemini-2.5-flash-preview-05-20", "meta-llama/llama-3.1-8b-instruct:free", "microsoft/phi-3-mini-128k-instruct:free", "deepseek/deepseek-r1:free"],
+        "openrouter": ["google/gemini-2.0-flash-001", "google/gemma-3-27b-it:free", "google/gemma-3-12b-it:free", "google/gemma-3-4b-it:free", "google/gemini-2.5-flash"],
         "ollama": ["llama3.2", "llama3.1", "mistral", "codellama", "phi3", "qwen2.5"],
     }
 
