@@ -68,7 +68,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--provider", "-p",
         type=str,
-        choices=["openai", "anthropic", "google", "ollama"],
+        choices=["openai", "anthropic", "google", "openrouter", "ollama"],
         default=None,
         help="LLM provider (default: auto-detect from env)",
     )
