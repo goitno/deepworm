@@ -12,6 +12,10 @@ from typing import Any, Optional
 CONFIG_FILES = [
     "deepworm.toml",
     ".deepworm.toml",
+    "deepworm.yaml",
+    "deepworm.yml",
+    ".deepworm.yaml",
+    ".deepworm.yml",
     "pyproject.toml",  # [tool.deepworm] section
 ]
 
@@ -142,10 +146,22 @@ class Config:
 
     @classmethod
     def from_file(cls, path: str) -> "Config":
-        """Load config from a specific TOML file."""
-        data = _parse_toml_file(Path(path))
+        """Load config from a specific TOML or YAML file."""
+        p = Path(path)
+        if p.suffix in (".yaml", ".yml"):
+            data = _parse_yaml_file(p)
+        else:
+            data = _parse_toml_file(p)
         if data is None:
             raise FileNotFoundError(f"Config file not found: {path}")
+        return cls(**data)
+
+    @classmethod
+    def from_yaml(cls, path: str) -> "Config":
+        """Load config from a YAML file."""
+        data = _parse_yaml_file(Path(path))
+        if data is None:
+            raise FileNotFoundError(f"YAML config file not found: {path}")
         return cls(**data)
 
 
@@ -157,6 +173,8 @@ def _load_config_file() -> dict[str, Any] | None:
         for filename in CONFIG_FILES:
             filepath = directory / filename
             if filepath.exists():
+                if filepath.suffix in (".yaml", ".yml"):
+                    return _parse_yaml_file(filepath)
                 return _parse_toml_file(filepath)
     return None
 
@@ -183,6 +201,31 @@ def _parse_toml_file(path: Path) -> dict[str, Any] | None:
         data = data.get("tool", {}).get("deepworm", {})
         if not data:
             return None
+
+    # Filter to only valid Config fields
+    valid_fields = {f.name for f in Config.__dataclass_fields__.values()}
+    return {k: v for k, v in data.items() if k in valid_fields} or None
+
+
+def _parse_yaml_file(path: Path) -> dict[str, Any] | None:
+    """Parse a YAML config file and extract deepworm settings."""
+    try:
+        import yaml
+    except ImportError:
+        return None
+
+    try:
+        with open(path, "r") as f:
+            data = yaml.safe_load(f)
+    except Exception:
+        return None
+
+    if not isinstance(data, dict):
+        return None
+
+    # Support nested deepworm key or flat config
+    if "deepworm" in data and isinstance(data["deepworm"], dict):
+        data = data["deepworm"]
 
     # Filter to only valid Config fields
     valid_fields = {f.name for f in Config.__dataclass_fields__.values()}

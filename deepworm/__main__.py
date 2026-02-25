@@ -100,6 +100,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Enable debug logging",
     )
     parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        metavar="FILE",
+        help="Load config from a specific file (TOML or YAML)",
+    )
+    parser.add_argument(
         "--no-cache",
         action="store_true",
         help="Disable disk cache for search results and pages",
@@ -465,7 +472,14 @@ def main(args: list[str] | None = None) -> None:
             console.print("[dim]Run deepworm --list-profiles to see available profiles[/dim]")
             sys.exit(1)
     else:
-        config = Config.auto()
+        if getattr(opts, "config", None):
+            try:
+                config = Config.from_file(opts.config)
+            except FileNotFoundError:
+                console.print(f"[red]Config file not found: {opts.config}[/red]")
+                sys.exit(1)
+        else:
+            config = Config.auto()
 
     # Save profile if requested (after config is built)
     if opts.save_profile:

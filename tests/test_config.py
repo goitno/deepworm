@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-from deepworm.config import Config, _load_config_file, _parse_toml_file
+from deepworm.config import Config, _load_config_file, _parse_toml_file, _parse_yaml_file
 
 
 def test_default_config():
@@ -168,3 +168,76 @@ def test_config_rate_limit_setting():
     """Rate limit setting should be configurable."""
     config = Config(provider="ollama", api_key="ollama", max_requests_per_minute=30)
     assert config.max_requests_per_minute == 30
+
+
+# --- YAML config tests ---
+
+def test_parse_yaml_file_flat(tmp_path):
+    """Should parse a flat YAML config."""
+    yaml_file = tmp_path / "deepworm.yaml"
+    yaml_file.write_text("provider: anthropic\napi_key: sk-test\ndepth: 5\nbreadth: 8\n")
+    result = _parse_yaml_file(yaml_file)
+    assert result is not None
+    assert result["provider"] == "anthropic"
+    assert result["depth"] == 5
+    assert result["breadth"] == 8
+
+
+def test_parse_yaml_file_nested(tmp_path):
+    """Should extract nested deepworm key from YAML."""
+    yaml_file = tmp_path / "deepworm.yml"
+    yaml_file.write_text("deepworm:\n  provider: google\n  depth: 3\n  api_key: test\n")
+    result = _parse_yaml_file(yaml_file)
+    assert result is not None
+    assert result["provider"] == "google"
+    assert result["depth"] == 3
+
+
+def test_parse_yaml_filters_invalid_fields(tmp_path):
+    """Should ignore fields not in Config dataclass."""
+    yaml_file = tmp_path / "deepworm.yaml"
+    yaml_file.write_text("provider: ollama\nfake_field: ignore\nanother: 42\n")
+    result = _parse_yaml_file(yaml_file)
+    assert result is not None
+    assert "fake_field" not in result
+    assert result["provider"] == "ollama"
+
+
+def test_parse_yaml_file_not_found():
+    """Should return None for missing file."""
+    result = _parse_yaml_file(Path("/nonexistent/deepworm.yaml"))
+    assert result is None
+
+
+def test_parse_yaml_file_invalid(tmp_path):
+    """Should return None for non-dict YAML content."""
+    yaml_file = tmp_path / "deepworm.yaml"
+    yaml_file.write_text("- item1\n- item2\n")
+    result = _parse_yaml_file(yaml_file)
+    assert result is None
+
+
+def test_from_file_yaml(tmp_path):
+    """Config.from_file should load from YAML."""
+    yaml_file = tmp_path / "deepworm.yaml"
+    yaml_file.write_text("provider: ollama\napi_key: ollama\ndepth: 4\nbreadth: 6\n")
+    config = Config.from_file(str(yaml_file))
+    assert config.provider == "ollama"
+    assert config.depth == 4
+    assert config.breadth == 6
+
+
+def test_from_yaml(tmp_path):
+    """Config.from_yaml should load from YAML file."""
+    yaml_file = tmp_path / "config.yml"
+    yaml_file.write_text("provider: ollama\napi_key: ollama\ndepth: 3\n")
+    config = Config.from_yaml(str(yaml_file))
+    assert config.provider == "ollama"
+    assert config.depth == 3
+
+
+def test_from_yaml_not_found():
+    """Config.from_yaml should raise FileNotFoundError."""
+    import pytest
+    with pytest.raises(FileNotFoundError):
+        Config.from_yaml("/nonexistent/config.yaml")
