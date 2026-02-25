@@ -151,6 +151,9 @@ deepworm "topic" --metrics                          # show detailed research met
 deepworm "topic" --sections "Summary|Findings"      # filter to matching sections
 deepworm "topic" --timeout 300                      # 5-minute time budget
 deepworm "topic" --resume                           # resume latest session
+deepworm "topic" --plan                             # show research plan before executing
+deepworm "topic" --plan-only                        # generate plan without researching
+deepworm "topic" --config myconfig.yaml             # load config from custom file
 deepworm "topic" --log-file research.log            # log to file
 deepworm "topic" --log-level debug                  # set log level
 deepworm --compare "React" "Vue" "Svelte"           # compare topics
@@ -411,12 +414,17 @@ print(f"Similarity: {summary['similarity_ratio']:.0%}")
 | Report diffing | Compare report versions (`--diff`) | No |
 | Section filtering | Regex section filter (`--sections`) | No |
 | Time budget | Research timeout (`--timeout`) | No |
+| Research planner | Topic analysis & sub-questions (`--plan`) | No |
+| YAML config | `deepworm.yaml` + `--config` flag | No |
+| Topic validation | Auto-validates topics with suggestions | No |
+| Content extraction | Metadata, headings, quality scoring | Limited |
+| Table generation | Markdown tables from data/CSV | No |
 | Config validation | Validates all settings on creation | No |
 | Templates | 10 built-in presets | No |
 | Web UI | Built-in (`--serve`) | Yes |
 | Search providers | 3 (DDG, Brave, SearXNG) | 5+ |
 | Dependencies | 3 packages | 30+ packages |
-| Lines of code | ~3,500 | ~10,000+ |
+| Lines of code | ~7,300 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -445,7 +453,11 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Comparison mode** — research and compare multiple topics side by side
 - **Persona mode** — adjust perspective (e.g. "PhD student", "startup founder")
 - **Session save/resume** — auto-saves state after each iteration
-- **Config file** — `deepworm.toml` or `pyproject.toml [tool.deepworm]`
+- **Config file** — `deepworm.toml`, `deepworm.yaml`, or `pyproject.toml [tool.deepworm]`
+- **Research planner** — pre-research topic analysis with sub-questions
+- **Topic validation** — validates and sanitizes topics before research
+- **Content extraction** — structured metadata, headings, code blocks from web pages
+- **Table generation** — markdown tables from data, CSV import/export
 - **Source scoring** — quality heuristics prioritize better sources
 - **Content deduplication** — shingle-based near-duplicate detection
 - **Report quality scoring** — grades A+ to F with improvement suggestions

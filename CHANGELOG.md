@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-02-25
+
+### Added
+
+- **Research Planner** (`--plan`, `--plan-only`): Pre-research topic analysis that generates a structured research plan with sub-questions, key aspects, complexity estimation, and suggested depth/breadth settings. Uses LLM for intelligent analysis with heuristic fallback.
+- **YAML Config Support**: Load configuration from `deepworm.yaml`, `deepworm.yml`, `.deepworm.yaml`, or `.deepworm.yml` files. Supports both flat and nested (`deepworm:` key) formats.
+- **Config File Flag** (`--config FILE`): Load configuration from a specific TOML or YAML file.
+- **Topic Validator**: Automatic topic validation before research — catches empty/too-short/too-long topics, detects vague or overly broad topics, normalizes whitespace, provides improvement suggestions.
+- **Markdown Table Generation**: Utility module for creating well-formatted markdown tables from lists of dicts, key-value pairs, or CSV data. Supports column alignment, transposition, and CSV import/export.
+- **Content Extraction**: Advanced HTML content extraction with metadata (title, author, date, description), heading/link/code block extraction, reading time estimation, and content quality scoring.
+- **New Exports**: `ResearchPlan`, `generate_plan`, `estimate_complexity`, `ValidationResult`, `validate_topic` added to public API.
+- PyYAML added as optional dependency (`pip install deepworm[yaml]`).
+
 ## [0.4.0] - 2025-02-25
 
 ### Added
