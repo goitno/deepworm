@@ -233,6 +233,20 @@ depth = 3
 
 All settings are optional. CLI flags override config file values.
 
+### Environment Variables
+
+Override any config setting with `DEEPWORM_*` environment variables:
+
+```bash
+export DEEPWORM_DEPTH=3
+export DEEPWORM_BREADTH=6
+export DEEPWORM_PROVIDER=anthropic
+export DEEPWORM_VERBOSE=true
+export DEEPWORM_OUTPUT_FORMAT=html
+```
+
+Priority: CLI flags > env vars > config file > defaults.
+
 ## Python API
 
 ```python
@@ -389,6 +403,63 @@ print(f"Added: {summary['added_lines']} | Removed: {summary['removed_lines']}")
 print(f"Similarity: {summary['similarity_ratio']:.0%}")
 ```
 
+### Source Credibility
+
+```python
+from deepworm import score_source, score_sources
+
+# Single source
+score = score_source("https://arxiv.org/abs/2401.12345")
+print(f"Credibility: {score.label} ({score.overall_score:.0%})")
+print(f"Tier: {score.tier}")
+
+# Batch scoring
+report = score_sources(["https://arxiv.org/abs/123", "https://medium.com/article"])
+print(report.to_markdown())
+```
+
+### Notion Export
+
+```python
+from deepworm import markdown_to_notion, export_notion_json
+
+# Convert report to Notion blocks
+page = markdown_to_notion(report)
+print(f"Title: {page.title}")
+print(f"Blocks: {page.block_count}")
+
+# Get ready-to-use Notion API payload
+payload = export_notion_json(report)
+# Use with Notion API client
+```
+
+### Report Outlines
+
+```python
+from deepworm import generate_outline, outline_from_report
+
+# Generate outline before research
+outline = generate_outline("quantum computing", style="academic")
+print(outline.to_markdown())
+
+# Extract outline from existing report
+outline = outline_from_report(report)
+print(f"Sections: {outline.section_count}")
+```
+
+### Progress Tracking
+
+```python
+from deepworm.progress import ProgressTracker, ResearchStage
+
+tracker = ProgressTracker()
+tracker.on_progress(lambda snap: print(f"{snap.overall_percent:.0f}% - {snap.message}"))
+tracker.start()
+tracker.enter_stage(ResearchStage.SEARCHING, total_items=10)
+# ... research loop ...
+tracker.complete()
+```
+
 ## vs. gpt-researcher
 
 | | deepworm | gpt-researcher |
@@ -419,12 +490,19 @@ print(f"Similarity: {summary['similarity_ratio']:.0%}")
 | Topic validation | Auto-validates topics with suggestions | No |
 | Content extraction | Metadata, headings, quality scoring | Limited |
 | Table generation | Markdown tables from data/CSV | No |
+| Source credibility | 3-tier domain scoring + content analysis | No |
+| Notion export | Notion API block format + roundtrip | No |
+| Progress tracking | Stage-based progress with ETA | Limited |
+| Env var config | `DEEPWORM_*` env var overrides | No |
+| Report outlines | 3 outline styles + reverse-engineering | No |
+| Retry strategies | 4 backoff strategies + circuit breaker | No |
+| Link checking | Extract & validate markdown links | No |
 | Config validation | Validates all settings on creation | No |
 | Templates | 10 built-in presets | No |
 | Web UI | Built-in (`--serve`) | Yes |
 | Search providers | 3 (DDG, Brave, SearXNG) | 5+ |
 | Dependencies | 3 packages | 30+ packages |
-| Lines of code | ~7,300 | ~10,000+ |
+| Lines of code | ~9,500 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -475,6 +553,13 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Concurrent fetching** — parallel page downloads and searches
 - **JSON output** — pipe results to other tools (`--json`)
 - **Typed** — full `py.typed` marker for IDE support
+- **Source credibility** — 3-tier domain authority scoring with content analysis
+- **Notion export** — convert reports to Notion API-ready block format
+- **Report outlines** — 3 outline styles (comprehensive, brief, academic)
+- **Progress tracking** — real-time stage-based progress with ETA estimation
+- **Env var config** — `DEEPWORM_*` environment variable overrides
+- **Circuit breaker** — prevent cascading failures with auto-recovery
+- **Link checking** — extract and validate links from markdown reports
 
 ## License
 

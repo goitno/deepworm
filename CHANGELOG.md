@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-02-25
+
+### Added
+
+- **Report Outline Generation**: Structured outline creation with 3 styles — comprehensive (6 sections), brief (3 sections), academic (8 sections with Abstract, Literature Review, Methodology). Comparison-aware section generation for "vs" topics. Reverse-engineering outlines from existing reports via `outline_from_report()`.
+- **Source Credibility Scoring**: Multi-factor credibility assessment for web sources. 3-tier domain authority system, content quality analysis (research language, references, spam detection), freshness scoring, URL structure signals. `CredibilityReport` with markdown table output.
+- **Notion Export**: Convert markdown reports to Notion API block format. Supports headings, paragraphs, code blocks, quotes, lists, tables, dividers. Rich text parsing with bold, italic, inline code, and links. Roundtrip support via `notion_to_markdown()`.
+- **Progress Tracking**: Real-time research progress tracking with 10 research stages, callback support, ETA estimation, and progress bar utilities. `ProgressTracker` with `ProgressSnapshot` for serializable progress state.
+- **Environment Variable Config Overrides**: `DEEPWORM_*` environment variables (e.g., `DEEPWORM_DEPTH=5`, `DEEPWORM_PROVIDER=anthropic`) override config file settings. `Config.from_env()` classmethod for explicit env-based configuration.
+- **Retry Strategies**: Advanced retry decorator with 4 backoff strategies (exponential, linear, constant, exponential_jitter). Circuit breaker pattern with closed/open/half-open states and auto-recovery.
+- **Markdown Link Checker**: Extract and validate links from markdown reports. `LinkReport` with health scoring, broken link detection, and markdown output.
+- **New Exports**: `CredibilityScore`, `CredibilityReport`, `score_source`, `score_sources`, `NotionBlock`, `NotionPage`, `export_notion_json`, `markdown_to_notion`, `OutlineSection`, `ReportOutline`, `generate_outline`, `outline_from_report` added to public API.
+
 ## [0.5.0] - 2025-02-25
 
 ### Added
