@@ -4,7 +4,16 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Optional
+from pathlib import Path
+from typing import Any, Optional
+
+
+# Config file names to search for (in order of priority)
+CONFIG_FILES = [
+    "deepworm.toml",
+    ".deepworm.toml",
+    "pyproject.toml",  # [tool.deepworm] section
+]
 
 
 @dataclass
@@ -66,12 +75,62 @@ class Config:
         }
         return defaults.get(provider or self.provider, "gpt-4o-mini")
 
-    # Ollama settings
     @property
     def ollama_base_url(self) -> str:
         return self.base_url or "http://localhost:11434/v1"
 
     @classmethod
     def auto(cls) -> "Config":
-        """Create a Config with auto-detected settings."""
+        """Create a Config with auto-detected settings, loading from config file if available."""
+        file_config = _load_config_file()
+        if file_config:
+            return cls(**file_config)
         return cls()
+
+    @classmethod
+    def from_file(cls, path: str) -> "Config":
+        """Load config from a specific TOML file."""
+        data = _parse_toml_file(Path(path))
+        if data is None:
+            raise FileNotFoundError(f"Config file not found: {path}")
+        return cls(**data)
+
+
+def _load_config_file() -> dict[str, Any] | None:
+    """Search for and load a config file from CWD up to root."""
+    cwd = Path.cwd()
+
+    for directory in [cwd, *cwd.parents]:
+        for filename in CONFIG_FILES:
+            filepath = directory / filename
+            if filepath.exists():
+                return _parse_toml_file(filepath)
+    return None
+
+
+def _parse_toml_file(path: Path) -> dict[str, Any] | None:
+    """Parse a TOML config file and extract deepworm settings."""
+    try:
+        import tomllib
+    except ImportError:
+        try:
+            import tomli as tomllib  # type: ignore[no-redef]
+        except ImportError:
+            # Python < 3.11 without tomli installed
+            return None
+
+    try:
+        with open(path, "rb") as f:
+            data = tomllib.load(f)
+    except Exception:
+        return None
+
+    # Check for [tool.deepworm] in pyproject.toml
+    if path.name == "pyproject.toml":
+        data = data.get("tool", {}).get("deepworm", {})
+        if not data:
+            return None
+
+    # Filter to only valid Config fields
+    valid_fields = {f.name for f in Config.__dataclass_fields__.values()}
+    return {k: v for k, v in data.items() if k in valid_fields} or None

@@ -141,6 +141,37 @@ deepworm --compare "PostgreSQL" "MySQL" "SQLite" -o comparison.md
 
 This researches each topic individually, then generates a structured comparison with tables and analysis.
 
+## Config File
+
+Instead of CLI flags, you can use a config file. deepworm searches from the current directory up to the root for:
+
+1. `deepworm.toml`
+2. `.deepworm.toml`
+3. `pyproject.toml` (under `[tool.deepworm]`)
+
+**deepworm.toml:**
+
+```toml
+provider = "ollama"
+model = "llama3.2"
+depth = 3
+breadth = 6
+temperature = 0.2
+search_region = "us-en"
+search_max_results = 10
+```
+
+**pyproject.toml:**
+
+```toml
+[tool.deepworm]
+provider = "openai"
+model = "gpt-4o"
+depth = 3
+```
+
+All settings are optional. CLI flags override config file values.
+
 ## Python API
 
 ```python
