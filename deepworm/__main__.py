@@ -153,6 +153,17 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="PORT",
         help="Start web UI server (default port: 8888)",
     )
+    parser.add_argument(
+        "--template", "-t",
+        type=str,
+        metavar="NAME",
+        help="Use a research template (e.g. quick, deep, academic, market, technical)",
+    )
+    parser.add_argument(
+        "--list-templates",
+        action="store_true",
+        help="List available research templates and exit",
+    )
     return parser
 
 
@@ -220,6 +231,18 @@ def main(args: list[str] | None = None) -> None:
         serve(port=opts.serve)
         return
 
+    # Handle templates
+    from .templates import get_template, list_templates
+
+    if opts.list_templates:
+        templates = list_templates()
+        console.print("[bold]Available research templates:[/bold]\n")
+        for t in templates:
+            console.print(f"  [cyan]{t.name:<14}[/cyan] {t.description}")
+            if t.persona:
+                console.print(f"  [dim]{'':14} Persona: {t.persona}[/dim]")
+        return
+
     # Handle cache operations
     from .cache import Cache, get_cache
 
@@ -233,6 +256,18 @@ def main(args: list[str] | None = None) -> None:
 
     # Build config early (needed for both modes)
     config = Config.auto()
+
+    # Apply template if specified
+    template = None
+    if opts.template:
+        template = get_template(opts.template)
+        if template is None:
+            console.print(f"[red]Unknown template: {opts.template}[/red]")
+            console.print("[dim]Run deepworm --list-templates to see available templates[/dim]")
+            sys.exit(1)
+        template.apply_to_config(config)
+        if template.persona and not opts.persona:
+            opts.persona = template.persona
 
     if opts.provider:
         config.provider = opts.provider

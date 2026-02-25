@@ -31,6 +31,7 @@ from .history import add_entry as _add_history
 from .plugins import PluginManager
 from .search import SearchResult, fetch_page_text, search_web
 from .session import save_session
+from .utils import ContentDeduplicator
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,7 @@ class DeepResearcher:
         self.cache = cache if cache is not None else get_cache()
         self.events = events or EventEmitter()
         self.plugins = plugins or PluginManager()
+        self._dedup = ContentDeduplicator(threshold=0.7)
 
     def _progress(self, msg: str) -> None:
         if self._on_progress:
@@ -246,6 +248,10 @@ class DeepResearcher:
 
             for source in new_sources:
                 if not source.content:
+                    continue
+                # Skip near-duplicate content
+                if self._dedup.is_duplicate(source.content):
+                    logger.debug("Skipping duplicate: %s", source.url)
                     continue
                 # Apply filter hook
                 if not self.plugins.apply_filter_source(source.url, source.title, source.content):

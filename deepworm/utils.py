@@ -189,3 +189,79 @@ def chunk_text(text: str, max_chars: int = 4000, overlap: int = 200) -> list[str
 
     return chunks
 
+
+def content_fingerprint(text: str, shingle_size: int = 5) -> set[int]:
+    """Generate a set of shingle hashes for content similarity detection.
+
+    Uses character-level shingles for language-independent matching.
+    """
+    import hashlib
+
+    text = text.lower().strip()
+    if len(text) < shingle_size:
+        return {hash(text)}
+
+    shingles: set[int] = set()
+    for i in range(len(text) - shingle_size + 1):
+        shingle = text[i:i + shingle_size]
+        shingles.add(hash(shingle))
+
+    return shingles
+
+
+def content_similarity(text_a: str, text_b: str, shingle_size: int = 5) -> float:
+    """Compute Jaccard similarity between two texts using shingles.
+
+    Returns a value between 0.0 (completely different) and 1.0 (identical).
+    """
+    fp_a = content_fingerprint(text_a, shingle_size)
+    fp_b = content_fingerprint(text_b, shingle_size)
+
+    if not fp_a or not fp_b:
+        return 0.0
+
+    intersection = len(fp_a & fp_b)
+    union = len(fp_a | fp_b)
+
+    return intersection / union if union > 0 else 0.0
+
+
+class ContentDeduplicator:
+    """Detect and filter duplicate or near-duplicate content.
+
+    Maintains fingerprints of seen content and rejects new content
+    that exceeds the similarity threshold.
+    """
+
+    def __init__(self, threshold: float = 0.7, shingle_size: int = 5):
+        self.threshold = threshold
+        self.shingle_size = shingle_size
+        self._fingerprints: list[set[int]] = []
+
+    def is_duplicate(self, text: str) -> bool:
+        """Check if text is a near-duplicate of previously seen content."""
+        if not text or len(text) < 50:
+            return False
+
+        fp = content_fingerprint(text, self.shingle_size)
+
+        for existing_fp in self._fingerprints:
+            if not existing_fp:
+                continue
+            intersection = len(fp & existing_fp)
+            union = len(fp | existing_fp)
+            if union > 0 and (intersection / union) >= self.threshold:
+                return True
+
+        self._fingerprints.append(fp)
+        return False
+
+    def add(self, text: str) -> None:
+        """Add content without checking for duplicates."""
+        if text and len(text) >= 50:
+            self._fingerprints.append(content_fingerprint(text, self.shingle_size))
+
+    @property
+    def seen_count(self) -> int:
+        return len(self._fingerprints)
+

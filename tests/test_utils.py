@@ -5,8 +5,10 @@ import time
 import pytest
 
 from deepworm.utils import (
+    ContentDeduplicator,
     RateLimiter,
     chunk_text,
+    content_similarity,
     estimate_cost,
     estimate_tokens,
     retry,
@@ -182,4 +184,59 @@ def test_chunk_text_overlap():
     text = "A" * 100 + ". " + "B" * 100
     chunks = chunk_text(text, max_chars=110, overlap=20)
     assert len(chunks) >= 2
+
+
+# ── content similarity & dedup tests ──
+
+
+def test_content_similarity_identical():
+    assert content_similarity("hello world foo bar baz", "hello world foo bar baz") == 1.0
+
+
+def test_content_similarity_different():
+    sim = content_similarity("apple banana cherry", "xyz qwerty asdfgh")
+    assert sim < 0.3
+
+
+def test_content_similarity_partial():
+    a = "The quick brown fox jumps over the lazy dog"
+    b = "The quick brown fox runs across the lazy dog"
+    sim = content_similarity(a, b)
+    assert 0.3 < sim < 0.95
+
+
+def test_deduplicator_no_dup():
+    dedup = ContentDeduplicator(threshold=0.7)
+    text = "This is a unique piece of content that is long enough to be analyzed " * 3
+    assert not dedup.is_duplicate(text)
+    assert dedup.seen_count == 1
+
+
+def test_deduplicator_detects_dup():
+    dedup = ContentDeduplicator(threshold=0.7)
+    text = "This is a very specific unique piece of content for testing deduplication " * 3
+    assert not dedup.is_duplicate(text)
+    assert dedup.is_duplicate(text)  # exact same text
+
+
+def test_deduplicator_near_dup():
+    dedup = ContentDeduplicator(threshold=0.6)
+    text1 = "The comprehensive guide to machine learning algorithms and neural networks " * 5
+    text2 = "The comprehensive guide to machine learning algorithms and neural networks explained " * 5
+    assert not dedup.is_duplicate(text1)
+    assert dedup.is_duplicate(text2)  # near-duplicate
+
+
+def test_deduplicator_different_content():
+    dedup = ContentDeduplicator(threshold=0.7)
+    text1 = "Python is a programming language known for its simplicity and readability " * 3
+    text2 = "JavaScript was originally created for web browsers but now runs everywhere " * 3
+    assert not dedup.is_duplicate(text1)
+    assert not dedup.is_duplicate(text2)
+
+
+def test_deduplicator_short_text():
+    dedup = ContentDeduplicator(threshold=0.7)
+    assert not dedup.is_duplicate("short")
+    assert dedup.seen_count == 0  # short text ignored
 
