@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-02-25
+
+### Added
+
+- **Glossary Extraction** (`glossary.py`): Automatic glossary generation from research reports. 5 definition patterns ("defined as", "refers to", "which is", "i.e.", em-dash), abbreviation detection (e.g., "Natural Language Processing (NLP)"), compound term extraction from headings. `Glossary` with add/get/remove/sort (alphabetical, frequency, occurrence). `inject_glossary()` appends formatted glossary section. Markdown table and definition list output.
+- **Text Similarity Analysis** (`similarity.py`): Three similarity metrics — cosine similarity (TF vectors), Jaccard similarity (set overlap), overlap coefficient. `compare_texts()` combines all metrics with `is_similar` (>0.6) and `is_duplicate` (>0.85) thresholds. `detect_plagiarism()` via common n-gram sequences. `find_similar()` corpus search. `text_fingerprint()` for document fingerprinting.
+- **Report Annotations** (`annotations.py`): 6 annotation types — comment, highlight, question, todo, warning, fact_check. `AnnotationSet` with add/resolve/filter/summary. `annotate_report()` with inline HTML comments or append styles. `extract_annotations()` parses HTML comment and CriticMarkup (`{>> <<}`) formats. `auto_annotate()` detects vague language, unsupported statistics, and TODO markers.
+- **Batch Research** (`batch.py`): Run multiple research tasks sequentially with `create_batch()` and `run_batch()`. `BatchConfig` with stop_on_error, retry_failed (configurable max_retries), delay_between tasks. `BatchResult` with success_rate, `combine_reports()`, markdown summary. `batch_from_file()` loads topics from text files.
+- **New Exports**: 20 new public API exports including `AnnotationSet`, `AnnotationType`, `annotate_report`, `auto_annotate`, `extract_annotations`, `BatchConfig`, `BatchResult`, `BatchStatus`, `BatchTask`, `create_batch`, `run_batch`, `Glossary`, `GlossaryEntry`, `extract_glossary`, `inject_glossary`, `SimilarityResult`, `compare_texts`, `cosine_similarity`, `detect_plagiarism`, `find_similar`. Total public API: 85 exports.
+
 ## [0.7.0] - 2025-02-25
 
 ### Added

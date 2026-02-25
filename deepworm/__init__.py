@@ -2,9 +2,11 @@
 
 import logging
 
-__version__ = "0.7.0"
+__version__ = "0.8.0"
 
+from .annotations import AnnotationSet, AnnotationType, annotate_report, auto_annotate, extract_annotations
 from .async_api import AsyncResearcher, async_research
+from .batch import BatchConfig, BatchResult, BatchStatus, BatchTask, create_batch, run_batch
 from .chain import research_chain
 from .credibility import CredibilityReport, CredibilityScore, score_source, score_sources
 from .events import Event, EventEmitter, EventType
@@ -22,6 +24,7 @@ from .exceptions import (
 )
 from .export import ExportFormat, ExportOptions, ExportResult, batch_export, export_report
 from .footnotes import FootnoteResult, add_footnotes, merge_footnotes, renumber_footnotes, strip_footnotes
+from .glossary import Glossary, GlossaryEntry, extract_glossary, inject_glossary
 from .history import HistoryEntry
 from .keywords import Keyword, KeywordResult, extract_keywords, extract_tags
 from .languages import Language, get_language, list_languages
@@ -32,12 +35,19 @@ from .progress import ProgressSnapshot, ProgressTracker, ResearchStage
 from .readability import ReadabilityResult, analyze_readability
 from .researcher import DeepResearcher
 from .scoring import QualityScore, score_report
+from .similarity import SimilarityResult, compare_texts, cosine_similarity, detect_plagiarism, find_similar
 from .summary import Summary, extract_key_findings, extract_topics, summarize
 from .validator import ValidationResult, validate_topic
 
 __all__ = [
     "APIKeyError",
+    "AnnotationSet",
+    "AnnotationType",
     "AsyncResearcher",
+    "BatchConfig",
+    "BatchResult",
+    "BatchStatus",
+    "BatchTask",
     "ConfigError",
     "ContentExtractionError",
     "CredibilityReport",
@@ -51,6 +61,8 @@ __all__ = [
     "ExportOptions",
     "ExportResult",
     "FootnoteResult",
+    "Glossary",
+    "GlossaryEntry",
     "HistoryEntry",
     "Keyword",
     "KeywordResult",
@@ -71,23 +83,34 @@ __all__ = [
     "ResearchStage",
     "SearchError",
     "SessionError",
+    "SimilarityResult",
     "Summary",
     "ValidationResult",
     "__version__",
     "add_footnotes",
     "analyze_readability",
+    "annotate_report",
     "async_research",
+    "auto_annotate",
     "batch_export",
+    "compare_texts",
+    "cosine_similarity",
+    "create_batch",
+    "detect_plagiarism",
     "estimate_complexity",
     "export_notion_json",
     "export_report",
+    "extract_annotations",
+    "extract_glossary",
     "extract_key_findings",
     "extract_keywords",
     "extract_tags",
     "extract_topics",
+    "find_similar",
     "generate_outline",
     "generate_plan",
     "get_language",
+    "inject_glossary",
     "list_languages",
     "markdown_to_notion",
     "merge_footnotes",
@@ -95,6 +118,7 @@ __all__ = [
     "renumber_footnotes",
     "research",
     "research_chain",
+    "run_batch",
     "score_report",
     "score_source",
     "score_sources",

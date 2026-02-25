@@ -507,7 +507,11 @@ tracker.complete()
 | Multi-format export | MD/HTML/JSON/Text/Notion/CSV hub | Limited |
 | Summarization | 4 styles (executive, abstract, bullets, TLDR) | No |
 | Readability analysis | 4 formulas (Flesch, Fog, Coleman-Liau) | No |
-| Lines of code | ~11,100 | ~10,000+ |
+| Glossary extraction | Auto-detect definitions + abbreviations | No |
+| Similarity analysis | Cosine, Jaccard, plagiarism detection | No |
+| Annotations | 6 types + auto-detect + CriticMarkup | No |
+| Batch research | Multi-topic with retry + config | No |
+| Lines of code | ~13,500 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -570,6 +574,10 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Multi-format export** — unified export to MD, HTML, JSON, text, Notion, CSV
 - **Summarization** — 4 styles: executive, abstract, bullets, TLDR
 - **Readability analysis** — Flesch, Flesch-Kincaid, Gunning Fog, Coleman-Liau
+- **Glossary extraction** — auto-detect definitions, abbreviations, compound terms
+- **Text similarity** — cosine, Jaccard, overlap; plagiarism detection and fingerprinting
+- **Report annotations** — 6 annotation types, auto-detect vague language, CriticMarkup
+- **Batch research** — run multiple topics with retry, stop-on-error, and callbacks
 
 ## License
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "deepworm"
-version = "0.7.0"
+version = "0.8.0"
 description = "AI-powered deep research agent. Open-source alternative to OpenAI Deep Research."
 readme = "README.md"
 license = {text = "MIT"}
