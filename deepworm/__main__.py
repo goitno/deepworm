@@ -1065,6 +1065,45 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
             os.system("cls" if os.name == "nt" else "clear")
             continue
 
+        if user_input == "/":
+            # Interactive command menu
+            _menu_items = [
+                ("help", "Show all commands", lambda: _show_help()),
+                ("models", "List & switch models", lambda: _show_models_interactive(config)),
+                ("config", "Show configuration", lambda: _show_config(config)),
+                ("history", "Research history", lambda: _show_history_interactive()),
+                ("clear", "Clear screen", lambda: os.system("cls" if os.name == "nt" else "clear")),
+                ("exit", "Exit deepworm", None),
+            ]
+            console.print()
+            for idx, (label, desc, _) in enumerate(_menu_items, 1):
+                console.print(f"  [cyan]{idx}[/cyan]  {label:<12} [dim]{desc}[/dim]")
+            console.print()
+            try:
+                choice = input("  Select: ").strip()
+            except (KeyboardInterrupt, EOFError):
+                console.print()
+                continue
+            if not choice:
+                continue
+            try:
+                idx = int(choice)
+                if 1 <= idx <= len(_menu_items):
+                    label, _, action = _menu_items[idx - 1]
+                    if label == "exit":
+                        user_input = "/exit"
+                        cmd_lower = "/exit"
+                        # Fall through to exit handler
+                    elif action:
+                        action()
+                        continue
+                    else:
+                        continue
+                else:
+                    continue
+            except ValueError:
+                continue
+
         if cmd_lower.startswith("/compare"):
             parts = user_input.split(maxsplit=1)
             if len(parts) < 2:
@@ -1235,7 +1274,7 @@ def _show_help() -> None:
     cmds.add_column(style="dim")
     cmds.add_row("/help", "Show this help")
     cmds.add_row("/models", "List & switch models interactively")
-    cmds.add_row("/set <key> <value>", "Change config (provider, model, depth, breadth)")
+    cmds.add_row("/set <key> <value>", "Change config (provider, model, depth, breadth, max_sources)")
     cmds.add_row("/config", "Show current configuration")
     cmds.add_row("/compare t1, t2, t3", "Compare multiple topics")
     cmds.add_row("/polish file.md", "Run polish pipeline on a file")
@@ -1251,10 +1290,11 @@ def _show_help() -> None:
     console.print()
 
     console.print("  [bold]Quick config:[/bold]")
-    console.print("  [dim]/set provider google      \u2190 Switch LLM provider[/dim]")
-    console.print("  [dim]/set model gemini-2.0-flash \u2190 Change model[/dim]")
-    console.print("  [dim]/set depth 3               \u2190 More research iterations[/dim]")
-    console.print("  [dim]/set breadth 4              \u2190 More search queries per iteration[/dim]")
+    console.print("  [dim]/set provider google       \u2190 Switch LLM provider[/dim]")
+    console.print("  [dim]/set model gemini-2.5-flash  \u2190 Change model[/dim]")
+    console.print("  [dim]/set depth 3                \u2190 More research iterations[/dim]")
+    console.print("  [dim]/set breadth 4               \u2190 More search queries per iteration[/dim]")
+    console.print("  [dim]/set max_sources 3           \u2190 Limit fetched pages per query[/dim]")
     console.print()
 
     console.print("  [bold]What is depth & breadth?[/bold]")
@@ -1285,6 +1325,7 @@ def _show_config(config: "Config") -> None:
     tbl.add_row("Model", config.model)
     tbl.add_row("Depth", str(config.depth))
     tbl.add_row("Breadth", str(config.breadth))
+    tbl.add_row("Max Sources", str(config.max_sources))
     tbl.add_row("Search", config.search_provider)
     tbl.add_row("Timeout", f"{config.timeout_seconds}s" if config.timeout_seconds > 0 else "unlimited")
     console.print()
@@ -1420,9 +1461,15 @@ def _handle_set_command(user_input: str, config: "Config") -> None:
             console.print(f"  [green]\u2713 breadth = {value}[/green]")
         except ValueError:
             console.print("  [yellow]breadth must be a number.[/yellow]")
+    elif key in ("max_sources", "sources", "max-sources"):
+        try:
+            config.max_sources = int(value)
+            console.print(f"  [green]\u2713 max_sources = {value}[/green]")
+        except ValueError:
+            console.print("  [yellow]max_sources must be a number.[/yellow]")
     else:
         console.print(f"  [yellow]Unknown key: {key}[/yellow]")
-        console.print("  [dim]Valid keys: provider, model, depth, breadth[/dim]")
+        console.print("  [dim]Valid keys: provider, model, depth, breadth, max_sources[/dim]")
 
 
 def _run_polish_inline(text: str, topic: str = "") -> None:

@@ -33,7 +33,7 @@ def test_default_models():
     for provider, expected in [
         ("openai", "gpt-4o-mini"),
         ("anthropic", "claude-3-5-haiku-latest"),
-        ("google", "gemini-3-flash-preview"),
+        ("google", "gemini-2.5-flash-lite"),
         ("ollama", "llama3.2"),
     ]:
         config = Config(provider=provider, api_key="test")
