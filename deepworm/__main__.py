@@ -227,6 +227,22 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="FILE",
         help="Export discovered sources to file (json/csv/bib)",
     )
+    parser.add_argument(
+        "--toc",
+        action="store_true",
+        help="Insert a table of contents into the report",
+    )
+    parser.add_argument(
+        "--stats",
+        action="store_true",
+        help="Show report statistics (word count, reading time, etc.)",
+    )
+    parser.add_argument(
+        "--diff",
+        nargs=2,
+        metavar=("OLD", "NEW"),
+        help="Show diff between two report files and exit",
+    )
     return parser
 
 
@@ -236,6 +252,30 @@ def main(args: list[str] | None = None) -> None:
 
     if opts.debug:
         logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s: %(message)s")
+
+    # Handle diff mode
+    if opts.diff:
+        from .diff import diff_reports, diff_summary
+        old_path, new_path = opts.diff
+        try:
+            old_content = open(old_path, encoding="utf-8").read()
+            new_content = open(new_path, encoding="utf-8").read()
+        except FileNotFoundError as e:
+            console.print(f"[red]File not found: {e.filename}[/red]")
+            sys.exit(1)
+        diff = diff_reports(old_content, new_content, old_label=old_path, new_label=new_path)
+        if not diff:
+            console.print("[green]Reports are identical.[/green]")
+        else:
+            summary = diff_summary(old_content, new_content)
+            console.print(f"[bold]Diff: {old_path} → {new_path}[/bold]")
+            console.print(
+                f"  [green]+{summary['added_lines']} lines[/green]  "
+                f"[red]-{summary['removed_lines']} lines[/red]  "
+                f"[dim]similarity: {summary['similarity_ratio']:.1%}[/dim]\n"
+            )
+            print(diff)
+        return
 
     # Handle history operations
     from .history import clear_history, list_entries, search_history, stats as history_stats
@@ -481,7 +521,24 @@ def main(args: list[str] | None = None) -> None:
                 console.print("[dim]  Run with --debug for full traceback[/dim]")
         sys.exit(1)
 
+    # Insert TOC if requested
+    if opts.toc:
+        from .report import inject_toc
+        report = inject_toc(report)
+
     _output_report(report, opts)
+
+    # Show report stats if requested
+    if opts.stats:
+        from .report import report_stats
+        s = report_stats(report)
+        console.print("\n[bold]Report Statistics[/bold]")
+        console.print(f"  Words:       {s['word_count']:,}")
+        console.print(f"  Sentences:   {s['sentence_count']}")
+        console.print(f"  Paragraphs:  {s['paragraph_count']}")
+        console.print(f"  Headings:    {s['heading_count']}")
+        console.print(f"  Links:       {s['link_count']}")
+        console.print(f"  Reading:     ~{s['reading_time_minutes']} min")
 
     # Export sources if requested
     if opts.export_sources:

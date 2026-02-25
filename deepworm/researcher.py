@@ -295,7 +295,17 @@ class DeepResearcher:
             ))
 
             if verbose:
-                console.print(f"[dim]Iteration completed in {elapsed:.1f}s[/dim]")
+                total_elapsed = time.time() - t_start
+                remaining = self.config.depth - (i + 1)
+                if remaining > 0 and (i + 1) > 0:
+                    avg_iter = total_elapsed / (i + 1)
+                    eta = avg_iter * remaining + avg_iter * 0.5  # +synthesis estimate
+                    console.print(
+                        f"[dim]Iteration completed in {elapsed:.1f}s · "
+                        f"ETA: ~{eta:.0f}s remaining[/dim]"
+                    )
+                else:
+                    console.print(f"[dim]Iteration completed in {elapsed:.1f}s[/dim]")
 
             # Auto-save session state after each iteration
             self._save_state(state)

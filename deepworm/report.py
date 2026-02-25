@@ -391,3 +391,138 @@ def _slugify(text: str) -> str:
     text = re.sub(r'[\s_]+', '-', text)
     text = re.sub(r'-+', '-', text)
     return text[:60].strip('-')
+
+
+# --- Report analysis utilities ---
+
+
+def extract_toc(report: str) -> list[dict[str, str]]:
+    """Extract a table of contents from markdown headings.
+
+    Returns:
+        List of dicts with 'level', 'text', and 'anchor' keys.
+    """
+    toc = []
+    for line in report.splitlines():
+        match = re.match(r'^(#{1,6})\s+(.+)$', line)
+        if match:
+            level = len(match.group(1))
+            text = match.group(2).strip()
+            # Create slug for anchor
+            anchor = re.sub(r'[^\w\s-]', '', text.lower())
+            anchor = re.sub(r'[\s]+', '-', anchor).strip('-')
+            toc.append({"level": level, "text": text, "anchor": anchor})
+    return toc
+
+
+def generate_toc_markdown(report: str) -> str:
+    """Generate a markdown table of contents for a report.
+
+    Returns:
+        Markdown-formatted TOC string.
+    """
+    toc = extract_toc(report)
+    if not toc:
+        return ""
+
+    lines = ["## Table of Contents\n"]
+    min_level = min(entry["level"] for entry in toc)
+
+    for entry in toc:
+        indent = "  " * (entry["level"] - min_level)
+        lines.append(f"{indent}- [{entry['text']}](#{entry['anchor']})")
+
+    return "\n".join(lines)
+
+
+def inject_toc(report: str) -> str:
+    """Insert a table of contents after the first heading.
+
+    Returns:
+        Report with TOC inserted, or unchanged if no headings found.
+    """
+    toc = generate_toc_markdown(report)
+    if not toc:
+        return report
+
+    lines = report.splitlines()
+    insert_idx = 0
+
+    # Find the end of the first heading
+    for i, line in enumerate(lines):
+        if re.match(r'^#\s+', line):
+            insert_idx = i + 1
+            # Skip any blank lines after the title
+            while insert_idx < len(lines) and not lines[insert_idx].strip():
+                insert_idx += 1
+            break
+
+    result = lines[:insert_idx] + ["", toc, ""] + lines[insert_idx:]
+    return "\n".join(result)
+
+
+def report_stats(report: str) -> dict:
+    """Calculate report statistics.
+
+    Returns:
+        Dict with word_count, char_count, sentence_count, paragraph_count,
+        heading_count, link_count, reading_time_minutes.
+    """
+    text = _markdown_to_text(report)
+    words = text.split()
+    sentences = re.split(r'[.!?]+', text)
+    sentences = [s for s in sentences if s.strip()]
+    paragraphs = [p for p in text.split("\n\n") if p.strip()]
+    headings = extract_toc(report)
+    links = re.findall(r'\[.+?\]\(.+?\)', report)
+
+    word_count = len(words)
+    reading_time = max(1, round(word_count / 200))  # ~200 WPM
+
+    return {
+        "word_count": word_count,
+        "char_count": len(text),
+        "sentence_count": len(sentences),
+        "paragraph_count": len(paragraphs),
+        "heading_count": len(headings),
+        "link_count": len(links),
+        "reading_time_minutes": reading_time,
+    }
+
+
+def extract_sections(report: str) -> list[dict[str, str]]:
+    """Split a report into sections based on headings.
+
+    Returns:
+        List of dicts with 'heading', 'level', and 'content' keys.
+    """
+    sections = []
+    current_heading = ""
+    current_level = 0
+    current_lines: list[str] = []
+
+    for line in report.splitlines():
+        match = re.match(r'^(#{1,6})\s+(.+)$', line)
+        if match:
+            # Save previous section
+            if current_heading or current_lines:
+                sections.append({
+                    "heading": current_heading,
+                    "level": current_level,
+                    "content": "\n".join(current_lines).strip(),
+                })
+            current_heading = match.group(2).strip()
+            current_level = len(match.group(1))
+            current_lines = []
+        else:
+            current_lines.append(line)
+
+    # Save last section
+    if current_heading or current_lines:
+        sections.append({
+            "heading": current_heading,
+            "level": current_level,
+            "content": "\n".join(current_lines).strip(),
+        })
+
+    return sections
