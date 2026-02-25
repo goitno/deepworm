@@ -515,7 +515,11 @@ tracker.complete()
 | Bibliography mgmt | APA/MLA/BibTeX + auto-extraction | No |
 | Sentiment analysis | Lexicon-based + bias detection | No |
 | Cross-referencing | Sections/figures/tables + validation | No |
-| Lines of code | ~16,000 | ~10,000+ |
+| Word cloud | TF-IDF, frequency analysis, HTML output | No |
+| Revision tracking | LCS diff, rollback, changelog | No |
+| Document statistics | 25+ metrics, reading level, vocabulary | No |
+| Table of contents | Auto-generate, inject, numbered, HTML | No |
+| Lines of code | ~19,000 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -586,6 +590,10 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Bibliography management** — APA, MLA, BibTeX formatting with auto-extraction
 - **Sentiment analysis** — lexicon-based sentiment, tone, and bias detection
 - **Cross-referencing** — internal section/figure/table references with validation
+- **Word cloud** — word frequency analysis, TF-IDF, HTML cloud, CSV export
+- **Revision tracking** — LCS-based diff, rollback, changelog, merge histories
+- **Document statistics** — 25+ metrics, Flesch-Kincaid/ARI reading level, vocabulary analysis
+- **Table of contents** — auto-generate from headings, inject with markers, numbered, HTML
 
 ## License
 

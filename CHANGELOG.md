@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2025-02-25
+
+### Added
+
+- **Word Cloud & Frequency Analysis** (`wordcloud.py`): Generate word frequency data and cloud visualizations. `WordFrequency` dataclass with count, frequency, rank, TF-IDF, weight. `WordCloudData` with multiple output formats (markdown table, inline HTML cloud, CSV, size map). `generate_word_cloud()` with 130+ built-in stop words, configurable max_words, min_length, min_count, custom stop words. `compare_word_clouds()` for frequency distribution comparison. `tfidf_cloud()` for multi-document TF-IDF analysis. Markdown stripping and code block/URL removal in tokenizer.
+- **Document Revision Tracking** (`revisions.py`): Track changes between document versions with full history management. `Revision` with SHA-256 content hashing, word/line counts. `RevisionDiff` with LCS-based diff algorithm, unified diff output, markdown format. `RevisionHistory` with add/get/rollback/changelog/statistics. `compute_diff()` with modification detection (adjacent delete+add merging). `track_changes()` for quick two-version comparison. `merge_revisions()` with chronological ordering and deduplication.
+- **Comprehensive Statistics** (`statistics.py`): 25+ document metrics with markdown awareness. `TextStatistics` covering characters, words, sentences, paragraphs, vocabulary richness, hapax legomena, reading/speaking time (238/150 WPM). `compare_statistics()` for side-by-side document comparison with diff. `vocabulary_analysis()` with frequency distribution, rare words, type-token ratio. `section_statistics()` for per-heading breakdown. `reading_level()` with Flesch-Kincaid Grade Level and Automated Readability Index.
+- **Table of Contents** (`toc.py`): Generate, customize, and inject table of contents from markdown headings. `TocEntry` with auto-anchor slugification, depth tracking. `TableOfContents` with flat view, level filtering, max_depth. Multiple output formats: markdown, numbered markdown (hierarchical 1, 1.1, 1.2), HTML. `extract_toc()` with duplicate anchor handling. `inject_toc()` with marker-based or auto-placement insertion. `merge_tocs()` for combining multiple ToCs.
+- **New Exports**: 27 new public API exports. Total public API: 136 exports.
+
 ## [0.9.0] - 2025-02-25
 
 ### Added
