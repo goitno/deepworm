@@ -304,6 +304,19 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Generate and show research plan without executing research",
     )
+    parser.add_argument(
+        "--polish",
+        action="store_true",
+        help="Auto-polish report: run readability, compliance, scoring, and annotation analysis",
+    )
+    parser.add_argument(
+        "--graph",
+        nargs="?",
+        const="mermaid",
+        choices=["mermaid", "dot", "stats", "json"],
+        metavar="FORMAT",
+        help="Extract knowledge graph from report (mermaid/dot/stats/json, default: mermaid)",
+    )
     return parser
 
 
@@ -727,6 +740,135 @@ def main(args: list[str] | None = None) -> None:
             console.print("\n[dim]Suggestions:[/dim]")
             for tip in qs.suggestions:
                 console.print(f"  [dim]• {tip}[/dim]")
+
+    # Polish mode: full post-processing pipeline
+    if getattr(opts, "polish", False):
+        from .readability import analyze_readability
+        from .compliance import check_compliance
+        from .scoring import score_report as _score_polish
+        from .annotations import auto_annotate, annotate_report
+
+        console.print("\n[bold cyan]── Polish Pipeline ──[/bold cyan]\n")
+
+        # Step 1: Readability
+        ra = analyze_readability(report)
+        console.print(f"[bold]1. Readability[/bold]  {ra.reading_level} (Flesch {ra.flesch_reading_ease:.0f})")
+        console.print(
+            f"   Grade: {ra.grade_level} | "
+            f"Fog: {ra.gunning_fog:.1f} | "
+            f"Words: {ra.total_words:,} | "
+            f"Vocab richness: {ra.vocabulary_richness:.0%}"
+        )
+
+        # Step 2: Compliance
+        cr = check_compliance(report)
+        status = "[green]PASS[/green]" if cr.is_compliant else "[red]FAIL[/red]"
+        console.print(f"\n[bold]2. Compliance[/bold]  {status} ({cr.score:.0f}/100)")
+        if cr.issues:
+            errors = cr.error_count
+            warnings = cr.warning_count
+            info = len(cr.issues) - errors - warnings
+            console.print(
+                f"   [red]{errors} errors[/red] · "
+                f"[yellow]{warnings} warnings[/yellow] · "
+                f"[dim]{info} info[/dim]"
+            )
+            # Show top 5 issues
+            for issue in cr.issues[:5]:
+                sev_color = {"error": "red", "warning": "yellow", "info": "dim", "suggestion": "cyan"}
+                color = sev_color.get(issue.severity.value, "dim")
+                console.print(f"   [{color}]• {issue.message}[/{color}]")
+            if len(cr.issues) > 5:
+                console.print(f"   [dim]... and {len(cr.issues) - 5} more[/dim]")
+
+        # Step 3: Quality Score
+        qs_polish = _score_polish(report)
+        console.print(f"\n[bold]3. Quality Score[/bold]  {qs_polish.grade} ({qs_polish.overall:.0%})")
+        console.print(
+            f"   Structure {qs_polish.structure:.0%} · "
+            f"Depth {qs_polish.depth:.0%} · "
+            f"Sources {qs_polish.sources:.0%} · "
+            f"Readability {qs_polish.readability:.0%} · "
+            f"Completeness {qs_polish.completeness:.0%}"
+        )
+
+        # Step 4: Auto-annotations
+        anns = auto_annotate(report)
+        ann_count = len(anns.annotations)
+        if ann_count > 0:
+            console.print(f"\n[bold]4. Annotations[/bold]  {ann_count} findings")
+            from collections import Counter
+            type_counts = Counter(a.annotation_type.value for a in anns.annotations)
+            parts = [f"{v} {k}" for k, v in type_counts.most_common()]
+            console.print(f"   {' · '.join(parts)}")
+            for a in anns.annotations[:5]:
+                type_color = {
+                    "fact_check": "red", "warning": "yellow",
+                    "question": "cyan", "todo": "magenta",
+                }
+                color = type_color.get(a.annotation_type.value, "dim")
+                target = f" → {a.target[:50]}..." if a.target and len(a.target) > 50 else (f" → {a.target}" if a.target else "")
+                console.print(f"   [{color}]• [{a.annotation_type.value}] {a.text}{target}[/{color}]")
+            if ann_count > 5:
+                console.print(f"   [dim]... and {ann_count - 5} more[/dim]")
+        else:
+            console.print(f"\n[bold]4. Annotations[/bold]  [green]No issues found[/green]")
+
+        # Summary
+        console.print(f"\n[bold cyan]── Summary ──[/bold cyan]")
+        console.print(
+            f"   Quality: {qs_polish.grade} | "
+            f"Compliance: {'PASS' if cr.is_compliant else 'FAIL'} | "
+            f"Readability: {ra.reading_level} | "
+            f"Annotations: {ann_count}"
+        )
+
+    # Knowledge graph extraction
+    if getattr(opts, "graph", None) is not None:
+        from .graph import extract_concept_graph, extract_link_graph, merge_graphs
+
+        console.print("\n[bold cyan]── Knowledge Graph ──[/bold cyan]\n")
+        concept_g = extract_concept_graph(report)
+        link_g = extract_link_graph(report)
+        graph = merge_graphs(concept_g, link_g)
+        graph.name = opts.topic or "research"
+
+        gs = graph.stats()
+        console.print(
+            f"  Nodes: {gs.node_count} | Edges: {gs.edge_count} | "
+            f"Components: {gs.components} | Density: {gs.density:.3f}"
+        )
+
+        fmt = opts.graph
+        if fmt == "mermaid":
+            output = graph.to_mermaid()
+            console.print(f"\n[dim]```mermaid[/dim]")
+            print(output)
+            console.print(f"[dim]```[/dim]")
+        elif fmt == "dot":
+            output = graph.to_dot()
+            print(output)
+        elif fmt == "json":
+            import json as _json
+            print(_json.dumps(graph.to_dict(), indent=2))
+        elif fmt == "stats":
+            # Detailed stats with top nodes
+            console.print(f"  Avg Degree: {gs.avg_degree:.1f}")
+            if graph.nodes:
+                # Show nodes sorted by degree (most connected first)
+                node_degrees = [(n, graph.degree(n.node_id)) for n in graph.nodes]
+                node_degrees.sort(key=lambda x: x[1], reverse=True)
+                console.print(f"\n  [bold]Top connected nodes:[/bold]")
+                for node, deg in node_degrees[:10]:
+                    console.print(f"    {node.label} [{node.node_type}] — degree {deg}")
+
+        # Save graph to file if --output is specified
+        if opts.output and fmt in ("mermaid", "dot"):
+            ext = ".mmd" if fmt == "mermaid" else ".dot"
+            graph_path = opts.output.rsplit(".", 1)[0] + ext if "." in opts.output else opts.output + ext
+            with open(graph_path, "w", encoding="utf-8") as f:
+                f.write(output)
+            console.print(f"\n[green]Graph saved to {graph_path}[/green]")
 
     # Show research metrics if requested
     if opts.metrics:

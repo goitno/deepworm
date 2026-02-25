@@ -128,3 +128,52 @@ def test_parser_toc_and_stats():
     args = parser.parse_args(["topic", "--toc", "--stats"])
     assert args.toc is True
     assert args.stats is True
+
+
+def test_parser_polish_flag():
+    parser = build_parser()
+    args = parser.parse_args(["topic", "--polish"])
+    assert args.polish is True
+
+
+def test_parser_polish_default():
+    parser = build_parser()
+    args = parser.parse_args(["topic"])
+    assert args.polish is False
+
+
+def test_parser_graph_flag_default():
+    parser = build_parser()
+    args = parser.parse_args(["topic", "--graph"])
+    assert args.graph == "mermaid"
+
+
+def test_parser_graph_flag_dot():
+    parser = build_parser()
+    args = parser.parse_args(["topic", "--graph", "dot"])
+    assert args.graph == "dot"
+
+
+def test_parser_graph_flag_stats():
+    parser = build_parser()
+    args = parser.parse_args(["topic", "--graph", "stats"])
+    assert args.graph == "stats"
+
+
+def test_parser_graph_flag_json():
+    parser = build_parser()
+    args = parser.parse_args(["topic", "--graph", "json"])
+    assert args.graph == "json"
+
+
+def test_parser_graph_no_flag():
+    parser = build_parser()
+    args = parser.parse_args(["topic"])
+    assert args.graph is None
+
+
+def test_parser_polish_and_graph_combined():
+    parser = build_parser()
+    args = parser.parse_args(["topic", "--polish", "--graph", "stats"])
+    assert args.polish is True
+    assert args.graph == "stats"
