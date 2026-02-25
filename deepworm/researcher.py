@@ -375,6 +375,9 @@ class DeepResearcher:
         if verbose:
             console.print(f"[bold green]Done![/bold green] [dim]({total_time:.1f}s total, {len(state.sources)} sources)[/dim]\n")
 
+        # Store sources for post-research access (e.g., source export)
+        self.last_sources = state.sources
+
         return report
 
     def _generate_initial_queries(self, llm: LLMClient, topic: str) -> list[str]:

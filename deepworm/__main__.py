@@ -198,6 +198,35 @@ def build_parser() -> argparse.ArgumentParser:
         const=3,
         help="Run a chain of N research steps, each diving deeper (default: 3)",
     )
+    parser.add_argument(
+        "--profile",
+        type=str,
+        metavar="NAME",
+        help="Load a saved configuration profile",
+    )
+    parser.add_argument(
+        "--save-profile",
+        type=str,
+        metavar="NAME",
+        help="Save current configuration as a named profile and exit",
+    )
+    parser.add_argument(
+        "--list-profiles",
+        action="store_true",
+        help="List saved configuration profiles and exit",
+    )
+    parser.add_argument(
+        "--delete-profile",
+        type=str,
+        metavar="NAME",
+        help="Delete a saved profile and exit",
+    )
+    parser.add_argument(
+        "--export-sources",
+        type=str,
+        metavar="FILE",
+        help="Export discovered sources to file (json/csv/bib)",
+    )
     return parser
 
 
@@ -305,8 +334,44 @@ def main(args: list[str] | None = None) -> None:
 
     cache = get_cache(enabled=not opts.no_cache)
 
-    # Build config early (needed for both modes)
-    config = Config.auto()
+    # Handle profiles
+    from .profiles import delete_profile, list_profiles, load_profile, save_profile
+
+    if opts.list_profiles:
+        profiles = list_profiles()
+        if not profiles:
+            console.print("[dim]No saved profiles. Use --save-profile NAME to create one.[/dim]")
+            return
+        console.print("[bold]Saved configuration profiles:[/bold]\n")
+        for p in profiles:
+            console.print(
+                f"  [cyan]{p['name']:<16}[/cyan] "
+                f"{p['provider']}/{p['model']}  depth={p['depth']} breadth={p['breadth']}"
+            )
+        return
+
+    if opts.delete_profile:
+        if delete_profile(opts.delete_profile):
+            console.print(f"[green]Profile '{opts.delete_profile}' deleted.[/green]")
+        else:
+            console.print(f"[red]Profile '{opts.delete_profile}' not found.[/red]")
+        return
+
+    # Build config - from profile or auto-detected
+    if opts.profile:
+        config = load_profile(opts.profile)
+        if config is None:
+            console.print(f"[red]Profile '{opts.profile}' not found.[/red]")
+            console.print("[dim]Run deepworm --list-profiles to see available profiles[/dim]")
+            sys.exit(1)
+    else:
+        config = Config.auto()
+
+    # Save profile if requested (after config is built)
+    if opts.save_profile:
+        path = save_profile(opts.save_profile, config)
+        console.print(f"[green]Profile '{opts.save_profile}' saved.[/green]")
+        return
 
     # Apply template if specified
     template = None
@@ -417,6 +482,16 @@ def main(args: list[str] | None = None) -> None:
         sys.exit(1)
 
     _output_report(report, opts)
+
+    # Export sources if requested
+    if opts.export_sources:
+        from .sources import export_sources, sources_to_dicts
+        source_dicts = sources_to_dicts(getattr(researcher, "last_sources", []))
+        if source_dicts:
+            path = export_sources(source_dicts, opts.export_sources)
+            console.print(f"[green]Sources exported to {path} ({len(source_dicts)} sources)[/green]")
+        else:
+            console.print("[yellow]No sources to export.[/yellow]")
 
     # Copy to clipboard if requested
     if opts.copy:
