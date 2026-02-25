@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-02-25
+
+### Added
+
+- **Config Validation**: All configuration values are now validated on creation. Invalid provider, depth, breadth, temperature, or search settings raise clear `ValueError` messages.
+- **Report Quality Scoring** (`--score`): Automated report quality assessment across 5 dimensions — structure, depth, sources, readability, completeness — with letter grades (A+ to F) and improvement suggestions.
+- **Research Metrics** (`--metrics`): Detailed instrumentation tracking: timing breakdown (search/analysis/synthesis), API call counts, fetch success rates, duplicate detection stats, retry counts, and error tracking.
+- **Rate Limiting**: Built-in rate limiter for LLM API calls (`max_requests_per_minute` config option) prevents hitting provider limits.
+- **Research Timeout** (`--timeout SECONDS`): Set a time budget for research; automatically proceeds to synthesis when budget expires.
+- **Section Filtering** (`--sections PATTERN`): Filter report output to only sections matching a regex pattern.
+- **Parallel Search**: Search queries now execute concurrently (up to 4 workers), significantly speeding up the research phase.
+- **Report Diffing** (`--diff OLD NEW`): Compare two report files side-by-side with unified diff, added/removed line counts, and similarity ratio.
+- **Report Analysis**: Table of contents generation (`--toc`), report statistics (`--stats`), link extraction, and report summaries.
+- **Research Resume** (`--resume [FILE]`): Resume interrupted research from saved session files. Use `--resume auto` to find and resume the latest in-progress session.
+- **Logging Module** (`--log-file`, `--log-level`): Structured logging with configurable levels and optional file output for debugging.
+- **Link Extraction**: Extract all links from reports (inline markdown, bare URLs) with deduplication.
+- **Report Summary**: Auto-extract a brief summary from the report's first content paragraph.
+- New modules: `scoring.py`, `metrics.py`, `diff.py`, `log.py`
+- 258 tests (up from 203)
+
 ## [0.3.0] - 2025-02-25
 
 ### Added

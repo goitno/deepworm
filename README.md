@@ -144,7 +144,17 @@ deepworm "topic" --export-sources sources.json      # export sources as JSON
 deepworm "topic" --export-sources sources.csv       # export sources as CSV
 deepworm "topic" --export-sources refs.bib          # export sources as BibTeX
 deepworm "topic" --profile myconfig                 # use saved config profile
+deepworm "topic" --toc                              # insert table of contents
+deepworm "topic" --stats                            # show report statistics
+deepworm "topic" --score                            # show report quality score
+deepworm "topic" --metrics                          # show detailed research metrics
+deepworm "topic" --sections "Summary|Findings"      # filter to matching sections
+deepworm "topic" --timeout 300                      # 5-minute time budget
+deepworm "topic" --resume                           # resume latest session
+deepworm "topic" --log-file research.log            # log to file
+deepworm "topic" --log-level debug                  # set log level
 deepworm --compare "React" "Vue" "Svelte"           # compare topics
+deepworm --diff old.md new.md                       # diff two report files
 deepworm --save-profile myconfig                    # save current config as profile
 deepworm --list-profiles                            # show saved profiles
 deepworm --delete-profile myconfig                  # remove a profile
@@ -351,6 +361,31 @@ export_sources(sources, "sources.csv")  # CSV
 sources = import_sources("sources.json")
 ```
 
+### Report Quality Scoring
+
+```python
+from deepworm import score_report
+
+score = score_report(report)
+print(f"Grade: {score.grade} ({score.overall:.0%})")
+print(f"Structure: {score.structure:.0%}")
+print(f"Depth: {score.depth:.0%}")
+for tip in score.suggestions:
+    print(f"  • {tip}")
+```
+
+### Report Diffing
+
+```python
+from deepworm.diff import diff_reports, diff_summary
+
+# Compare two reports
+diff_text = diff_reports(old_report, new_report)
+summary = diff_summary(old_report, new_report)
+print(f"Added: {summary['added_lines']} | Removed: {summary['removed_lines']}")
+print(f"Similarity: {summary['similarity_ratio']:.0%}")
+```
+
 ## vs. gpt-researcher
 
 | | deepworm | gpt-researcher |
@@ -371,11 +406,17 @@ sources = import_sources("sources.json")
 | Research chaining | Progressive deep-dive (`--chain`) | No |
 | Config profiles | Save/load configs (`--profile`) | No |
 | Source export | JSON, CSV, BibTeX | No |
+| Report scoring | Quality grades A+ to F (`--score`) | No |
+| Metrics | Detailed research instrumentation (`--metrics`) | No |
+| Report diffing | Compare report versions (`--diff`) | No |
+| Section filtering | Regex section filter (`--sections`) | No |
+| Time budget | Research timeout (`--timeout`) | No |
+| Config validation | Validates all settings on creation | No |
 | Templates | 10 built-in presets | No |
 | Web UI | Built-in (`--serve`) | Yes |
 | Search providers | 3 (DDG, Brave, SearXNG) | 5+ |
 | Dependencies | 3 packages | 30+ packages |
-| Lines of code | ~2,500 | ~10,000+ |
+| Lines of code | ~3,500 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -407,9 +448,19 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Config file** — `deepworm.toml` or `pyproject.toml [tool.deepworm]`
 - **Source scoring** — quality heuristics prioritize better sources
 - **Content deduplication** — shingle-based near-duplicate detection
+- **Report quality scoring** — grades A+ to F with improvement suggestions
+- **Research metrics** — timing, API calls, fetch rates, error tracking
+- **Report diffing** — compare two report versions with unified diff
+- **Section filtering** — extract specific sections by regex pattern
+- **Table of contents** — auto-generated from headings
+- **Report statistics** — word count, reading time, links, headings
+- **Config validation** — validates all settings with clear error messages
+- **Time budget** — set research timeout in seconds
+- **Rate limiting** — configurable API call rate limits
+- **Structured logging** — file output with configurable levels
 - **Custom exceptions** — user-friendly error messages with hints
 - **Retry logic** — exponential backoff for transient failures
-- **Concurrent fetching** — parallel page downloads for speed
+- **Concurrent fetching** — parallel page downloads and searches
 - **JSON output** — pipe results to other tools (`--json`)
 - **Typed** — full `py.typed` marker for IDE support
 
