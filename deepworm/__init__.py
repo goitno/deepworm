@@ -2,7 +2,7 @@
 
 import logging
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 
 from .annotations import AnnotationSet, AnnotationType, annotate_report, auto_annotate, extract_annotations
 from .async_api import AsyncResearcher, async_research
@@ -34,6 +34,7 @@ from .glossary import Glossary, GlossaryEntry, extract_glossary, inject_glossary
 from .graph import Edge, EdgeType, GraphStats, KnowledgeGraph, Node, create_graph, extract_concept_graph, extract_link_graph, merge_graphs
 from .history import HistoryEntry
 from .hooks import HookContext, HookEntry, HookRegistry, HookResult, HookStage, Pipeline, PipelineResult, create_middleware, create_pipeline, get_global_registry, hook
+from .http_middleware import MiddlewarePhase, RequestMethod, Request, Response, MiddlewareEntry, MiddlewareStack, RequestLog, RequestLogger, header_injection, timeout_middleware, retry_middleware, auth_middleware, content_type_middleware, user_agent_middleware, create_response, create_request, create_middleware_stack, create_logger
 from .i18n import TranslationEntry, TranslationCatalog, LanguageDetection, detect_language, extract_translatable, create_catalog, merge_catalogs
 from .keywords import Keyword, KeywordResult, extract_keywords, extract_tags
 from .languages import Language, get_language, list_languages
@@ -41,6 +42,7 @@ from .notion import NotionBlock, NotionPage, export_notion_json, markdown_to_not
 from .outline import OutlineSection, ReportOutline, generate_outline, outline_from_report
 from .planner import ResearchPlan, generate_plan, estimate_complexity
 from .progress import ProgressSnapshot, ProgressTracker, ResearchStage
+from .rate_limiter import LimiterStrategy, LimitAction, RateLimitInfo, RateLimitStats, TokenBucket, SlidingWindow, FixedWindow, KeyedRateLimiter, rate_limit, RateLimitExceeded, create_token_bucket, create_sliding_window, create_fixed_window, create_keyed_limiter
 from .readability import ReadabilityResult, analyze_readability
 from .references import Reference, Bibliography, extract_references, create_reference, inject_bibliography, merge_bibliographies
 from .researcher import DeepResearcher
@@ -49,10 +51,12 @@ from .schema import DocumentSchema, FieldType, SchemaField, SectionRule, Validat
 from .scoring import QualityScore, score_report
 from .security import ContentPolicy, SecurityFinding, SecurityReport, ThreatLevel, ThreatType, check_path_traversal, constant_time_compare, content_hash, detect_pii, detect_secrets, extract_urls, generate_token, mask_secret, redact_text, relaxed_policy, sanitize_html, sanitize_markdown, scan_content, strict_policy, validate_url
 from .sentiment import SentimentScore, SentimentReport, ToneAnalysis, analyze_sentiment, analyze_tone, analyze_report_sentiment, sentiment_diff
+from .serialization import Format, SerializationResult, DeserializationResult, to_json, from_json, to_yaml, from_yaml, to_csv, from_csv, to_xml, from_xml, to_markdown_table, from_markdown_table, detect_format, convert, serialize, pretty_json, minify_json
 from .similarity import SimilarityResult, compare_texts, cosine_similarity, detect_plagiarism, find_similar
 from .statistics import TextStatistics, ComparisonResult, compute_statistics, compare_statistics, vocabulary_analysis, section_statistics, reading_level
 from .summary import Summary, extract_key_findings, extract_topics, summarize
 from .template_engine import RenderResult, TemplateContext, TemplateError, Token, TokenType, comparison_template, create_context, extract_variables, list_filters, render_template, report_template, validate_template
+from .testing_utils import AssertionMode, TestFixture, MockCall, MockFunction, MockSequence, Snapshot, SnapshotStore, TimingResult, create_fixture, create_mock, create_sequence, sample_markdown, sample_research_data, sample_config, assert_markdown_valid, assert_contains_all, assert_json_valid, assert_word_count_range, assert_no_duplicates, create_snapshot_store, time_execution, assert_fast
 from .timeline import Timeline, TimelineEvent, extract_timeline, create_timeline, compare_timelines
 from .toc import TocEntry, TableOfContents, extract_toc, generate_toc, inject_toc, merge_tocs
 from .transform import TransformChain, TransformChainResult, TransformResult, TransformType, cleanup_transform, create_transform_chain, extract_section, find_replace, find_replace_batch, fix_indentation, normalize_headings, normalize_links, normalize_whitespace, remove_section, reorder_sections, strip_comments, strip_html, to_sentence_case, to_title_case, wrap_text
@@ -63,6 +67,7 @@ __all__ = [
     "APIKeyError",
     "AnnotationSet",
     "AnnotationType",
+    "AssertionMode",
     "AsyncResearcher",
     "AuditAction",
     "AuditEntry",
@@ -95,6 +100,7 @@ __all__ = [
     "DeepResearcher",
     "DeepWormError",
     "DependencyStatus",
+    "DeserializationResult",
     "DiagnosticReport",
     "DocumentSchema",
     "Edge",
@@ -109,7 +115,9 @@ __all__ = [
     "ExportOptions",
     "ExportResult",
     "FieldType",
+    "FixedWindow",
     "FootnoteResult",
+    "Format",
     "FormatOptions",
     "FormatResult",
     "Glossary",
@@ -123,12 +131,21 @@ __all__ = [
     "HookResult",
     "HookStage",
     "IssueCategory",
+    "KeyedRateLimiter",
     "Keyword",
     "KeywordResult",
     "KnowledgeGraph",
     "Language",
     "LanguageDetection",
+    "LimitAction",
+    "LimiterStrategy",
     "ListStyle",
+    "MiddlewareEntry",
+    "MiddlewarePhase",
+    "MiddlewareStack",
+    "MockCall",
+    "MockFunction",
+    "MockSequence",
     "ModelNotFoundError",
     "NetworkError",
     "Node",
@@ -144,12 +161,20 @@ __all__ = [
     "ProviderError",
     "QualityScore",
     "RateLimitError",
+    "RateLimitExceeded",
+    "RateLimitInfo",
+    "RateLimitStats",
     "ReadabilityResult",
     "Reference",
     "RenderResult",
     "ReportOutline",
+    "Request",
+    "RequestLog",
+    "RequestLogger",
+    "RequestMethod",
     "ResearchPlan",
     "ResearchStage",
+    "Response",
     "Revision",
     "RevisionDiff",
     "RevisionHistory",
@@ -162,23 +187,30 @@ __all__ = [
     "SecurityReport",
     "SentimentReport",
     "SentimentScore",
+    "SerializationResult",
     "SessionError",
     "Severity",
     "SimilarityResult",
+    "SlidingWindow",
+    "Snapshot",
+    "SnapshotStore",
     "StyleGuide",
     "Summary",
     "TableAlignment",
     "TableOfContents",
     "TemplateContext",
     "TemplateError",
+    "TestFixture",
     "TextStatistics",
     "ThreatLevel",
     "ThreatType",
     "TieredCache",
     "Timeline",
     "TimelineEvent",
+    "TimingResult",
     "TocEntry",
     "Token",
+    "TokenBucket",
     "TokenType",
     "ToneAnalysis",
     "TransformChain",
@@ -201,7 +233,14 @@ __all__ = [
     "analyze_tone",
     "annotate_report",
     "article_schema",
+    "assert_contains_all",
+    "assert_fast",
+    "assert_json_valid",
+    "assert_markdown_valid",
+    "assert_no_duplicates",
+    "assert_word_count_range",
     "async_research",
+    "auth_middleware",
     "auto_annotate",
     "batch_export",
     "build_crossref_index",
@@ -220,6 +259,8 @@ __all__ = [
     "compute_statistics",
     "constant_time_compare",
     "content_hash",
+    "content_type_middleware",
+    "convert",
     "cosine_similarity",
     "create_audit_log",
     "create_batch",
@@ -227,19 +268,32 @@ __all__ = [
     "create_catalog",
     "create_compute_cache",
     "create_context",
+    "create_fixture",
+    "create_fixed_window",
     "create_format_options",
     "create_graph",
     "create_history",
+    "create_keyed_limiter",
+    "create_logger",
     "create_middleware",
+    "create_middleware_stack",
+    "create_mock",
     "create_pipeline",
     "create_profiler",
     "create_reference",
+    "create_request",
+    "create_response",
     "create_revision",
     "create_schema",
+    "create_sequence",
+    "create_sliding_window",
+    "create_snapshot_store",
     "create_style_guide",
     "create_tiered_cache",
     "create_timeline",
+    "create_token_bucket",
     "create_transform_chain",
+    "detect_format",
     "detect_language",
     "detect_pii",
     "detect_plagiarism",
@@ -269,6 +323,11 @@ __all__ = [
     "fix_indentation",
     "format_document",
     "format_table",
+    "from_csv",
+    "from_json",
+    "from_markdown_table",
+    "from_xml",
+    "from_yaml",
     "generate_list_of_figures",
     "generate_list_of_tables",
     "generate_outline",
@@ -278,6 +337,7 @@ __all__ = [
     "generate_word_cloud",
     "get_global_registry",
     "get_language",
+    "header_injection",
     "hook",
     "inject_bibliography",
     "inject_crossrefs",
@@ -294,6 +354,7 @@ __all__ = [
     "merge_graphs",
     "merge_revisions",
     "merge_tocs",
+    "minify_json",
     "minimal_audit_policy",
     "normalize_blockquotes",
     "normalize_code_fences",
@@ -303,7 +364,9 @@ __all__ = [
     "normalize_lists",
     "normalize_whitespace",
     "outline_from_report",
+    "pretty_json",
     "quick_check",
+    "rate_limit",
     "reading_level",
     "redact_text",
     "relaxed_policy",
@@ -315,8 +378,12 @@ __all__ = [
     "report_template",
     "research",
     "research_chain",
+    "retry_middleware",
     "run_batch",
     "run_diagnostics",
+    "sample_config",
+    "sample_markdown",
+    "sample_research_data",
     "sanitize_html",
     "sanitize_markdown",
     "scan_content",
@@ -326,6 +393,7 @@ __all__ = [
     "section_statistics",
     "self_test",
     "sentiment_diff",
+    "serialize",
     "sort_list",
     "strict_audit_policy",
     "strict_policy",
@@ -335,9 +403,17 @@ __all__ = [
     "summarize",
     "technical_style_guide",
     "tfidf_cloud",
+    "time_execution",
+    "timeout_middleware",
+    "to_csv",
+    "to_json",
+    "to_markdown_table",
     "to_sentence_case",
     "to_title_case",
+    "to_xml",
+    "to_yaml",
     "track_changes",
+    "user_agent_middleware",
     "validate_template",
     "validate_topic",
     "validate_url",

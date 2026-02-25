@@ -531,7 +531,11 @@ tracker.complete()
 | Content security | XSS/SSRF/PII/secret scanning, sanitization | No |
 | Advanced caching | LRU/LFU/FIFO, tiered cache, memoize decorator | No |
 | Diagnostics | Health checks, profiling, self-test, env info | No |
-| Lines of code | ~31,000 | ~10,000+ |
+| HTTP middleware | Request/response pipeline, retry, auth, logging | No |
+| Serialization | JSON/YAML/CSV/XML/Markdown table, auto-detect | No |
+| Rate limiting | Token bucket, sliding/fixed window, per-key | No |
+| Testing utils | Fixtures, mocks, snapshots, timing assertions | No |
+| Lines of code | ~35,000 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -618,6 +622,10 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Content security** — XSS/SSRF/PII/secret scanning, HTML sanitization, content policies
 - **Advanced caching** — LRU/LFU/FIFO eviction, tiered cache, compute cache, memoize decorator
 - **Diagnostics** — health checks, dependency verification, performance profiling, self-test
+- **HTTP middleware** — request/response pipeline with retry, auth, timeout, logging middleware
+- **Multi-format serialization** — JSON, YAML, CSV, XML, Markdown table with auto-detection and conversion
+- **Rate limiting** — token bucket, sliding window, fixed window strategies with per-key limiting
+- **Testing utilities** — fixtures, mock functions, snapshot testing, timing assertions, sample data generators
 
 ## License
 
