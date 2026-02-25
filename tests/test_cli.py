@@ -194,11 +194,38 @@ def test_interactive_shell_config_function():
 
 
 def test_interactive_shell_models_function():
-    """Test that _show_models runs without error."""
-    from deepworm.__main__ import _show_models
+    """Test that _show_models_interactive runs without error."""
+    from unittest.mock import patch
+    from deepworm.__main__ import _show_models_interactive
     from deepworm.config import Config
     config = Config.auto()
-    _show_models(config)  # Should not raise
+    with patch("builtins.input", return_value=""):
+        _show_models_interactive(config)  # Should not raise
+
+
+def test_interactive_models_switch():
+    """Test model switching by number."""
+    from unittest.mock import patch
+    from deepworm.__main__ import _show_models_interactive
+    from deepworm.config import Config
+    config = Config.auto()
+    with patch("builtins.input", return_value="1"):
+        _show_models_interactive(config)
+    # Model should have switched to the first entry
+    assert config.model in ("gpt-4o", config.model)
+
+
+def test_handle_set_command():
+    """Test /set command for changing config."""
+    from deepworm.__main__ import _handle_set_command
+    from deepworm.config import Config
+    config = Config.auto()
+    _handle_set_command("/set depth 5", config)
+    assert config.depth == 5
+    _handle_set_command("/set breadth 8", config)
+    assert config.breadth == 8
+    _handle_set_command("/set model test-model", config)
+    assert config.model == "test-model"
 
 
 def test_interactive_polish_inline():

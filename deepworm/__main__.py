@@ -941,8 +941,38 @@ def main(args: list[str] | None = None) -> None:
 
 
 def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> None:
-    """Interactive CLI shell — Claude Code style experience."""
+    """Interactive CLI shell — Claude Code style experience with readline support."""
     import time as _time
+    import readline as _readline
+
+    # ---- Readline setup for arrow-key history & tab completion ----
+    _HISTORY_FILE = os.path.expanduser("~/.deepworm_history")
+    _COMMANDS = [
+        "/help", "/compare", "/polish", "/graph", "/config",
+        "/models", "/history", "/set", "/clear", "/exit",
+    ]
+
+    def _completer(text: str, state: int) -> str | None:
+        if text.startswith("/"):
+            matches = [c for c in _COMMANDS if c.startswith(text)]
+        else:
+            matches = []
+        return matches[state] if state < len(matches) else None
+
+    _readline.set_completer(_completer)
+    _readline.parse_and_bind("tab: complete")
+    _readline.set_completer_delims(" \t\n")
+    _readline.set_history_length(500)
+    try:
+        _readline.read_history_file(_HISTORY_FILE)
+    except (FileNotFoundError, OSError):
+        pass
+
+    def _save_history() -> None:
+        try:
+            _readline.write_history_file(_HISTORY_FILE)
+        except OSError:
+            pass
 
     # Detect provider info
     provider_info = f"{config.provider}/{config.model}"
@@ -950,23 +980,14 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
     # Welcome banner
     console.print()
     console.print(Panel(
-        f"[bold]deepworm[/bold] v{__version__}\n\n"
+        f"[bold white]deepworm[/bold white] v{__version__}\n\n"
         f"AI-powered deep research agent\n"
         f"Provider: [cyan]{provider_info}[/cyan]",
-        border_style="blue",
+        border_style="bright_blue",
         expand=False,
     ))
     console.print()
-    console.print("  [dim]Type a topic to research, or use a command:[/dim]")
-    console.print()
-    console.print("  [cyan]/help[/cyan]        Show all commands")
-    console.print("  [cyan]/compare[/cyan]     Compare multiple topics")
-    console.print("  [cyan]/polish[/cyan]      Analyze a report file")
-    console.print("  [cyan]/graph[/cyan]       Extract knowledge graph")
-    console.print("  [cyan]/config[/cyan]      Show current configuration")
-    console.print("  [cyan]/models[/cyan]      List available models")
-    console.print("  [cyan]/history[/cyan]     Show research history")
-    console.print("  [cyan]/exit[/cyan]        Exit deepworm")
+    console.print("  [dim]Just type a topic to start researching. Use[/dim] [cyan]/help[/cyan] [dim]for commands.[/dim]")
     console.print()
 
     total_tokens = 0
@@ -975,15 +996,16 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
 
     while True:
         try:
-            # Prompt with token count if any work was done
+            # Build prompt — plain text for readline (no Rich markup)
             if total_tokens > 0:
                 elapsed = _time.time() - session_start
-                prompt_text = f"[bold blue]deepworm[/bold blue] [dim]({total_tokens:,} tokens | {elapsed:.0f}s)[/dim] > "
+                prompt_str = f"\033[1;34mdeepworm\033[0m \033[2m({total_tokens:,} tokens | {elapsed:.0f}s)\033[0m > "
             else:
-                prompt_text = "[bold blue]deepworm[/bold blue] > "
+                prompt_str = "\033[1;34mdeepworm\033[0m > "
 
-            user_input = console.input(prompt_text).strip()
+            user_input = input(prompt_str).strip()
         except (KeyboardInterrupt, EOFError):
+            _save_history()
             console.print("\n[dim]Goodbye![/dim]")
             break
 
@@ -991,7 +1013,10 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
             continue
 
         # --- Commands ---
-        if user_input.lower() in ("/exit", "/quit", "/q", "exit", "quit"):
+        cmd_lower = user_input.lower()
+
+        if cmd_lower in ("/exit", "/quit", "/q", "exit", "quit"):
+            _save_history()
             elapsed = _time.time() - session_start
             console.print()
             if researches_done > 0:
@@ -1005,23 +1030,31 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
             console.print("[dim]Goodbye![/dim]")
             break
 
-        if user_input.lower() in ("/help", "/h", "help"):
+        if cmd_lower in ("/help", "/h", "help"):
             _show_help()
             continue
 
-        if user_input.lower() in ("/config", "/cfg"):
+        if cmd_lower in ("/config", "/cfg"):
             _show_config(config)
             continue
 
-        if user_input.lower() in ("/history", "/hist"):
+        if cmd_lower in ("/history", "/hist"):
             _show_history_interactive()
             continue
 
-        if user_input.lower() in ("/models",):
-            _show_models(config)
+        if cmd_lower in ("/models",):
+            _show_models_interactive(config)
             continue
 
-        if user_input.lower().startswith("/compare"):
+        if cmd_lower.startswith("/set "):
+            _handle_set_command(user_input, config)
+            continue
+
+        if cmd_lower in ("/clear",):
+            os.system("cls" if os.name == "nt" else "clear")
+            continue
+
+        if cmd_lower.startswith("/compare"):
             parts = user_input.split(maxsplit=1)
             if len(parts) < 2:
                 console.print("[dim]Usage: /compare topic1, topic2, topic3[/dim]")
@@ -1043,7 +1076,7 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
                 console.print(f"[red]Error: {e}[/red]")
             continue
 
-        if user_input.lower().startswith("/polish"):
+        if cmd_lower.startswith("/polish"):
             parts = user_input.split(maxsplit=1)
             if len(parts) < 2:
                 console.print("[dim]Usage: /polish <file.md>[/dim]")
@@ -1057,7 +1090,7 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
             _run_polish_inline(text)
             continue
 
-        if user_input.lower().startswith("/graph"):
+        if cmd_lower.startswith("/graph"):
             parts = user_input.split(maxsplit=1)
             if len(parts) < 2:
                 console.print("[dim]Usage: /graph <file.md>[/dim]")
@@ -1187,21 +1220,29 @@ def _show_help() -> None:
     console.print()
 
     cmds = Table(show_header=False, box=None, padding=(0, 2))
-    cmds.add_column(style="cyan", min_width=20)
+    cmds.add_column(style="cyan", min_width=24)
     cmds.add_column(style="dim")
     cmds.add_row("/help", "Show this help")
+    cmds.add_row("/models", "List & switch models interactively")
+    cmds.add_row("/set <key> <value>", "Change config (provider, model, depth, breadth)")
+    cmds.add_row("/config", "Show current configuration")
     cmds.add_row("/compare t1, t2, t3", "Compare multiple topics")
     cmds.add_row("/polish file.md", "Run polish pipeline on a file")
     cmds.add_row("/graph file.md", "Extract knowledge graph from a file")
-    cmds.add_row("/config", "Show current configuration")
-    cmds.add_row("/models", "List available models")
     cmds.add_row("/history", "Show research history")
+    cmds.add_row("/clear", "Clear screen")
     cmds.add_row("/exit", "Exit deepworm")
     console.print(cmds)
 
     console.print("\n  [bold]Research with inline flags:[/bold]")
     console.print("  [dim]bitcoin price 2027 -d 2 -b 3 --polish --graph[/dim]")
     console.print("  [dim]AI safety --output report.md --polish[/dim]")
+    console.print()
+
+    console.print("  [bold]Quick config:[/bold]")
+    console.print("  [dim]/set provider google[/dim]")
+    console.print("  [dim]/set model gemini-2.5-flash[/dim]")
+    console.print("  [dim]/set depth 3[/dim]")
     console.print()
 
     console.print("  [bold]Examples:[/bold]")
@@ -1254,25 +1295,110 @@ def _show_history_interactive() -> None:
 
 
 def _show_models(config: "Config") -> None:
-    """Show available models for current provider."""
+    """Show available models for current provider (non-interactive fallback)."""
+    _show_models_interactive(config)
+
+
+def _show_models_interactive(config: "Config") -> None:
+    """Show available models with numbered selection."""
     console.print()
-    models = {
+    all_models = {
         "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
         "anthropic": ["claude-sonnet-4-20250514", "claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"],
         "google": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-3-flash-preview"],
-        "ollama": ["llama3.1", "mistral", "codellama", "phi3"],
+        "ollama": ["llama3.2", "llama3.1", "mistral", "codellama", "phi3", "qwen2.5"],
     }
+
+    # Build flat numbered list
+    entries: list[tuple[str, str]] = []
+    for provider, models in all_models.items():
+        for model in models:
+            entries.append((provider, model))
+
     tbl = Table(title="Available Models", header_style="bold", padding=(0, 1))
-    tbl.add_column("Provider", style="cyan")
-    tbl.add_column("Models")
+    tbl.add_column("#", style="bold cyan", justify="right", width=3)
+    tbl.add_column("Provider", style="dim")
+    tbl.add_column("Model")
     tbl.add_column("", style="dim")
-    for provider, model_list in models.items():
-        is_current = provider == config.provider
-        marker = "[green]active[/green]" if is_current else ""
-        tbl.add_row(provider, ", ".join(model_list), marker)
+
+    for idx, (provider, model) in enumerate(entries, 1):
+        is_current = provider == config.provider and model == config.model
+        marker = "[green bold]\u2713 active[/green bold]" if is_current else ""
+        model_style = "[bold green]" if is_current else ""
+        model_end = "[/bold green]" if is_current else ""
+        tbl.add_row(str(idx), provider, f"{model_style}{model}{model_end}", marker)
+
     console.print(tbl)
     console.print(f"\n  [dim]Current: {config.provider}/{config.model}[/dim]")
+    console.print("  [dim]Type a number to switch, or press Enter to cancel:[/dim]")
+
+    try:
+        choice = input("  > ").strip()
+    except (KeyboardInterrupt, EOFError):
+        console.print()
+        return
+
+    if not choice:
+        return
+
+    try:
+        idx = int(choice)
+        if 1 <= idx <= len(entries):
+            new_provider, new_model = entries[idx - 1]
+            config.provider = new_provider
+            config.model = new_model
+            console.print(f"  [green]\u2713 Switched to {new_provider}/{new_model}[/green]")
+        else:
+            console.print(f"  [yellow]Invalid number. Choose 1-{len(entries)}.[/yellow]")
+    except ValueError:
+        # Maybe they typed a model name directly
+        for provider, model in entries:
+            if model == choice or choice == f"{provider}/{model}":
+                config.provider = provider
+                config.model = model
+                console.print(f"  [green]\u2713 Switched to {provider}/{model}[/green]")
+                break
+        else:
+            console.print(f"  [yellow]Unknown model: {choice}[/yellow]")
     console.print()
+
+
+def _handle_set_command(user_input: str, config: "Config") -> None:
+    """Handle /set key value commands."""
+    parts = user_input.split(maxsplit=2)
+    if len(parts) < 3:
+        console.print("  [dim]Usage: /set <key> <value>[/dim]")
+        console.print("  [dim]Keys: provider, model, depth, breadth[/dim]")
+        return
+
+    key = parts[1].lower()
+    value = parts[2].strip()
+
+    if key == "provider":
+        valid = ("openai", "anthropic", "google", "ollama")
+        if value not in valid:
+            console.print(f"  [yellow]Valid providers: {', '.join(valid)}[/yellow]")
+            return
+        config.provider = value
+        console.print(f"  [green]\u2713 provider = {value}[/green]")
+    elif key == "model":
+        config.model = value
+        console.print(f"  [green]\u2713 model = {value}[/green]")
+    elif key == "depth":
+        try:
+            config.depth = int(value)
+            console.print(f"  [green]\u2713 depth = {value}[/green]")
+        except ValueError:
+            console.print("  [yellow]depth must be a number.[/yellow]")
+    elif key == "breadth":
+        try:
+            config.breadth = int(value)
+            console.print(f"  [green]\u2713 breadth = {value}[/green]")
+        except ValueError:
+            console.print("  [yellow]breadth must be a number.[/yellow]")
+    else:
+        console.print(f"  [yellow]Unknown key: {key}[/yellow]")
+        console.print("  [dim]Valid keys: provider, model, depth, breadth[/dim]")
 
 
 def _run_polish_inline(text: str, topic: str = "") -> None:
