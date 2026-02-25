@@ -241,11 +241,35 @@ class OpenAICompatibleClient(LLMClient):
         self.model = model
 
     def chat(self, messages: list[dict[str, str]], temperature: float = 0.3) -> str:
-        resp = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            temperature=temperature,
-        )
+        try:
+            resp = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=temperature,
+            )
+        except Exception as e:
+            err = str(e)
+            # Some models don't support system instructions — retry with system→user
+            if "developer instruction" in err.lower() or "system" in err.lower() and "not" in err.lower():
+                fixed = []
+                for m in messages:
+                    if m.get("role") == "system":
+                        fixed.append({"role": "user", "content": f"[Instructions] {m['content']}"})
+                    else:
+                        fixed.append(m)
+                resp = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=fixed,
+                    temperature=temperature,
+                )
+            elif "429" in err or "rate" in err.lower():
+                from .exceptions import DeepWormError
+                raise DeepWormError(
+                    f"Rate limited on {self.model}",
+                    hint="Try a different model: /set model google/gemini-2.0-flash-001",
+                )
+            else:
+                raise
         # Track token usage from API response
         if resp.usage:
             self._record_usage(
