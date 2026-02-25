@@ -951,6 +951,69 @@ def main(args: list[str] | None = None) -> None:
         _interactive_qa(config, report, opts.topic, cache)
 
 
+def _arrow_select(items: list[tuple[str, str]], title: str = "") -> int | None:
+    """Interactive arrow-key menu selector. Returns selected index or None.
+
+    Each item is (label, description). Uses raw terminal I/O for arrow keys.
+    Works on macOS/Linux (requires termios).
+    """
+    import sys
+    import tty
+    import termios
+
+    if not items:
+        return None
+
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    selected = 0
+
+    def _render(first: bool = False) -> None:
+        if not first:
+            # Move cursor up to overwrite previous menu
+            sys.stdout.write(f"\033[{len(items)}A")
+        for i, (label, desc) in enumerate(items):
+            if i == selected:
+                sys.stdout.write(f"\033[2K  \033[36;1m› {label:<14}\033[0m {desc}\n")
+            else:
+                sys.stdout.write(f"\033[2K    \033[2m{label:<14} {desc}\033[0m\n")
+        sys.stdout.flush()
+
+    try:
+        _render(first=True)
+        while True:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+            if ch == "\x1b":  # Escape sequence
+                tty.setraw(fd)
+                ch2 = sys.stdin.read(1)
+                if ch2 == "[":
+                    ch3 = sys.stdin.read(1)
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                    if ch3 == "A":  # Up
+                        selected = (selected - 1) % len(items)
+                    elif ch3 == "B":  # Down
+                        selected = (selected + 1) % len(items)
+                else:
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                    # Bare Escape = cancel
+                    return None
+                _render()
+            elif ch in ("\r", "\n"):  # Enter
+                return selected
+            elif ch in ("\x03", "\x04"):  # Ctrl-C / Ctrl-D
+                return None
+            elif ch == "q":
+                return None
+    except Exception:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return None
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+
+
 def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> None:
     """Interactive CLI shell — Claude Code style experience with readline support."""
     import time as _time
@@ -1066,42 +1129,100 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
             continue
 
         if user_input == "/":
-            # Interactive command menu
+            # Interactive arrow-key command menu
             _menu_items = [
-                ("help", "Show all commands", lambda: _show_help()),
-                ("models", "List & switch models", lambda: _show_models_interactive(config)),
-                ("config", "Show configuration", lambda: _show_config(config)),
-                ("history", "Research history", lambda: _show_history_interactive()),
-                ("clear", "Clear screen", lambda: os.system("cls" if os.name == "nt" else "clear")),
-                ("exit", "Exit deepworm", None),
+                ("help", "Show all commands"),
+                ("models", "List & switch models"),
+                ("config", "Show configuration"),
+                ("set", "Change a setting"),
+                ("compare", "Compare topics"),
+                ("polish", "Analyze a report"),
+                ("graph", "Extract knowledge graph"),
+                ("history", "Research history"),
+                ("clear", "Clear screen"),
+                ("exit", "Exit deepworm"),
             ]
-            console.print()
-            for idx, (label, desc, _) in enumerate(_menu_items, 1):
-                console.print(f"  [cyan]{idx}[/cyan]  {label:<12} [dim]{desc}[/dim]")
-            console.print()
-            try:
-                choice = input("  Select: ").strip()
-            except (KeyboardInterrupt, EOFError):
-                console.print()
+            console.print("\n  [dim]↑↓ to move, Enter to select, Esc to cancel[/dim]\n")
+            idx = _arrow_select(_menu_items)
+            if idx is None:
                 continue
-            if not choice:
-                continue
-            try:
-                idx = int(choice)
-                if 1 <= idx <= len(_menu_items):
-                    label, _, action = _menu_items[idx - 1]
-                    if label == "exit":
-                        user_input = "/exit"
-                        cmd_lower = "/exit"
-                        # Fall through to exit handler
-                    elif action:
-                        action()
-                        continue
+            label = _menu_items[idx][0]
+            if label == "help":
+                _show_help()
+            elif label == "models":
+                _show_models_interactive(config)
+            elif label == "config":
+                _show_config(config)
+            elif label == "set":
+                console.print("  [dim]Usage: /set <key> <value>[/dim]")
+                console.print("  [dim]Keys: provider, model, depth, breadth, max_sources[/dim]")
+                try:
+                    setting = input("  /set ").strip()
+                    if setting:
+                        _handle_set_command(f"/set {setting}", config)
+                except (KeyboardInterrupt, EOFError):
+                    console.print()
+            elif label == "compare":
+                console.print("  [dim]Enter topics separated by commas:[/dim]")
+                try:
+                    topics_str = input("  Topics: ").strip()
+                    if topics_str:
+                        user_input = f"/compare {topics_str}"
+                        cmd_lower = user_input.lower()
+                        # Fall through to /compare handler below
                     else:
                         continue
-                else:
+                except (KeyboardInterrupt, EOFError):
+                    console.print()
                     continue
-            except ValueError:
+            elif label == "polish":
+                console.print("  [dim]Enter file path:[/dim]")
+                try:
+                    fpath = input("  File: ").strip()
+                    if fpath:
+                        user_input = f"/polish {fpath}"
+                        cmd_lower = user_input.lower()
+                        # Fall through to /polish handler below
+                    else:
+                        continue
+                except (KeyboardInterrupt, EOFError):
+                    console.print()
+                    continue
+            elif label == "graph":
+                console.print("  [dim]Enter file path:[/dim]")
+                try:
+                    fpath = input("  File: ").strip()
+                    if fpath:
+                        user_input = f"/graph {fpath}"
+                        cmd_lower = user_input.lower()
+                        # Fall through to /graph handler below
+                    else:
+                        continue
+                except (KeyboardInterrupt, EOFError):
+                    console.print()
+                    continue
+            elif label == "history":
+                _show_history_interactive()
+            elif label == "clear":
+                os.system("cls" if os.name == "nt" else "clear")
+            elif label == "exit":
+                user_input = "/exit"
+                cmd_lower = "/exit"
+                # Fall through to exit handler at top of loop... but we're past it
+                _save_history()
+                elapsed = _time.time() - session_start
+                console.print()
+                if researches_done > 0:
+                    summary = Table(show_header=False, box=None, padding=(0, 2))
+                    summary.add_column(style="bold")
+                    summary.add_column()
+                    summary.add_row("Session", f"{elapsed:.0f}s")
+                    summary.add_row("Researches", str(researches_done))
+                    summary.add_row("Total tokens", f"{total_tokens:,}")
+                    console.print(Panel(summary, title="[dim]Session Summary[/dim]", border_style="dim", expand=False))
+                console.print("[dim]Goodbye![/dim]")
+                break
+            if label not in ("compare", "polish", "graph"):
                 continue
 
         if cmd_lower.startswith("/compare"):
@@ -1365,66 +1486,37 @@ def _show_models(config: "Config") -> None:
 
 
 def _show_models_interactive(config: "Config") -> None:
-    """Show available models with numbered selection."""
+    """Show available models with arrow-key selection."""
     console.print()
     all_models = {
         "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],
         "anthropic": ["claude-sonnet-4-20250514", "claude-3-5-sonnet-20241022", "claude-3-haiku-20240307"],
-        "google": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-3-flash-preview"],
+        "google": ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-3-flash-preview"],
         "ollama": ["llama3.2", "llama3.1", "mistral", "codellama", "phi3", "qwen2.5"],
     }
 
-    # Build flat numbered list
+    # Build flat list for arrow selector
     entries: list[tuple[str, str]] = []
     for provider, models in all_models.items():
         for model in models:
             entries.append((provider, model))
 
-    tbl = Table(title="Available Models", header_style="bold", padding=(0, 1))
-    tbl.add_column("#", style="bold cyan", justify="right", width=3)
-    tbl.add_column("Provider", style="dim")
-    tbl.add_column("Model")
-    tbl.add_column("", style="dim")
-
-    for idx, (provider, model) in enumerate(entries, 1):
+    # Build items for _arrow_select
+    items: list[tuple[str, str]] = []
+    for provider, model in entries:
         is_current = provider == config.provider and model == config.model
-        marker = "[green bold]\u2713 active[/green bold]" if is_current else ""
-        model_style = "[bold green]" if is_current else ""
-        model_end = "[/bold green]" if is_current else ""
-        tbl.add_row(str(idx), provider, f"{model_style}{model}{model_end}", marker)
+        marker = " ✓ active" if is_current else ""
+        items.append((f"{provider}/{model}", marker))
 
-    console.print(tbl)
-    console.print(f"\n  [dim]Current: {config.provider}/{config.model}[/dim]")
-    console.print("  [dim]Type a number to switch, or press Enter to cancel:[/dim]")
+    console.print(f"  [dim]Current: {config.provider}/{config.model}[/dim]")
+    console.print("  [dim]↑↓ to move, Enter to select, Esc to cancel[/dim]\n")
 
-    try:
-        choice = input("  > ").strip()
-    except (KeyboardInterrupt, EOFError):
-        console.print()
-        return
-
-    if not choice:
-        return
-
-    try:
-        idx = int(choice)
-        if 1 <= idx <= len(entries):
-            new_provider, new_model = entries[idx - 1]
-            config.provider = new_provider
-            config.model = new_model
-            console.print(f"  [green]\u2713 Switched to {new_provider}/{new_model}[/green]")
-        else:
-            console.print(f"  [yellow]Invalid number. Choose 1-{len(entries)}.[/yellow]")
-    except ValueError:
-        # Maybe they typed a model name directly
-        for provider, model in entries:
-            if model == choice or choice == f"{provider}/{model}":
-                config.provider = provider
-                config.model = model
-                console.print(f"  [green]\u2713 Switched to {provider}/{model}[/green]")
-                break
-        else:
-            console.print(f"  [yellow]Unknown model: {choice}[/yellow]")
+    idx = _arrow_select(items)
+    if idx is not None:
+        new_provider, new_model = entries[idx]
+        config.provider = new_provider
+        config.model = new_model
+        console.print(f"  [green]✓ Switched to {new_provider}/{new_model}[/green]")
     console.print()
 
 

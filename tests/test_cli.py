@@ -199,20 +199,21 @@ def test_interactive_shell_models_function():
     from deepworm.__main__ import _show_models_interactive
     from deepworm.config import Config
     config = Config.auto()
-    with patch("builtins.input", return_value=""):
+    with patch("deepworm.__main__._arrow_select", return_value=None):
         _show_models_interactive(config)  # Should not raise
 
 
 def test_interactive_models_switch():
-    """Test model switching by number."""
+    """Test model switching via arrow select."""
     from unittest.mock import patch
     from deepworm.__main__ import _show_models_interactive
     from deepworm.config import Config
     config = Config.auto()
-    with patch("builtins.input", return_value="1"):
+    # Mock _arrow_select to return index 0 (first model: openai/gpt-4o)
+    with patch("deepworm.__main__._arrow_select", return_value=0):
         _show_models_interactive(config)
-    # Model should have switched to the first entry
-    assert config.model in ("gpt-4o", config.model)
+    assert config.provider == "openai"
+    assert config.model == "gpt-4o"
 
 
 def test_handle_set_command():
