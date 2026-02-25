@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deepworm"
+version = "0.1.0"
+description = "AI-powered deep research agent. Open-source alternative to OpenAI Deep Research."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Kadir Can Ozden", email = "101993364+bysiber@users.noreply.github.com"},
+]
+keywords = ["ai", "research", "deep-research", "llm", "agent", "web-search"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "httpx>=0.24.0",
+    "duckduckgo-search>=6.0.0",
+    "rich>=13.0.0",
+    "openai>=1.0.0",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.20.0"]
+google = ["google-generativeai>=0.5.0"]
+all = [
+    "anthropic>=0.20.0",
+    "google-generativeai>=0.5.0",
+]
+
+[project.scripts]
+deepworm = "deepworm.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/bysiber/deepworm"
+Repository = "https://github.com/bysiber/deepworm"
+Issues = "https://github.com/bysiber/deepworm/issues"
+
+[tool.setuptools.packages.find]
+include = ["deepworm*"]
