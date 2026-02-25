@@ -3,7 +3,7 @@
 import os
 from pathlib import Path
 
-from deepworm.config import Config, _load_config_file, _parse_toml_file, _parse_yaml_file
+from deepworm.config import Config, _load_config_file, _load_env_overrides, _parse_toml_file, _parse_yaml_file
 
 
 def test_default_config():
@@ -241,3 +241,99 @@ def test_from_yaml_not_found():
     import pytest
     with pytest.raises(FileNotFoundError):
         Config.from_yaml("/nonexistent/config.yaml")
+
+
+# ── Environment Variable Override Tests ──
+
+
+def test_load_env_overrides_depth(monkeypatch):
+    """DEEPWORM_DEPTH should override depth."""
+    monkeypatch.setenv("DEEPWORM_DEPTH", "7")
+    overrides = _load_env_overrides()
+    assert overrides["depth"] == 7
+
+
+def test_load_env_overrides_breadth(monkeypatch):
+    """DEEPWORM_BREADTH should override breadth."""
+    monkeypatch.setenv("DEEPWORM_BREADTH", "10")
+    overrides = _load_env_overrides()
+    assert overrides["breadth"] == 10
+
+
+def test_load_env_overrides_provider(monkeypatch):
+    """DEEPWORM_PROVIDER should override provider."""
+    monkeypatch.setenv("DEEPWORM_PROVIDER", "anthropic")
+    overrides = _load_env_overrides()
+    assert overrides["provider"] == "anthropic"
+
+
+def test_load_env_overrides_verbose_true(monkeypatch):
+    """DEEPWORM_VERBOSE=true should set verbose to True."""
+    monkeypatch.setenv("DEEPWORM_VERBOSE", "true")
+    overrides = _load_env_overrides()
+    assert overrides["verbose"] is True
+
+
+def test_load_env_overrides_verbose_false(monkeypatch):
+    """DEEPWORM_VERBOSE=false should set verbose to False."""
+    monkeypatch.setenv("DEEPWORM_VERBOSE", "false")
+    overrides = _load_env_overrides()
+    assert overrides["verbose"] is False
+
+
+def test_load_env_overrides_temperature(monkeypatch):
+    """DEEPWORM_TEMPERATURE should be parsed as float."""
+    monkeypatch.setenv("DEEPWORM_TEMPERATURE", "0.7")
+    overrides = _load_env_overrides()
+    assert overrides["temperature"] == 0.7
+
+
+def test_load_env_overrides_invalid_int(monkeypatch):
+    """Invalid int values should be silently skipped."""
+    monkeypatch.setenv("DEEPWORM_DEPTH", "not_a_number")
+    overrides = _load_env_overrides()
+    assert "depth" not in overrides
+
+
+def test_load_env_overrides_empty():
+    """No DEEPWORM_ vars should return empty dict."""
+    # This may pick up existing vars if set, so we just check it doesn't crash
+    overrides = _load_env_overrides()
+    assert isinstance(overrides, dict)
+
+
+def test_from_env(monkeypatch):
+    """Config.from_env should apply env vars."""
+    monkeypatch.setenv("DEEPWORM_DEPTH", "5")
+    monkeypatch.setenv("DEEPWORM_PROVIDER", "ollama")
+    monkeypatch.setenv("DEEPWORM_API_KEY", "ollama")
+    config = Config.from_env()
+    assert config.depth == 5
+    assert config.provider == "ollama"
+
+
+def test_from_env_explicit_override(monkeypatch):
+    """Explicit kwargs should override env vars."""
+    monkeypatch.setenv("DEEPWORM_DEPTH", "5")
+    config = Config.from_env(provider="ollama", api_key="ollama", depth=10)
+    assert config.depth == 10
+
+
+def test_load_env_overrides_output_format(monkeypatch):
+    """DEEPWORM_OUTPUT_FORMAT should override output format."""
+    monkeypatch.setenv("DEEPWORM_OUTPUT_FORMAT", "html")
+    overrides = _load_env_overrides()
+    assert overrides["output_format"] == "html"
+
+
+def test_load_env_overrides_multiple(monkeypatch):
+    """Multiple env vars should all be loaded."""
+    monkeypatch.setenv("DEEPWORM_DEPTH", "3")
+    monkeypatch.setenv("DEEPWORM_BREADTH", "6")
+    monkeypatch.setenv("DEEPWORM_TEMPERATURE", "0.5")
+    monkeypatch.setenv("DEEPWORM_VERBOSE", "1")
+    overrides = _load_env_overrides()
+    assert overrides["depth"] == 3
+    assert overrides["breadth"] == 6
+    assert overrides["temperature"] == 0.5
+    assert overrides["verbose"] is True

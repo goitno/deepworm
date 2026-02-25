@@ -59,6 +59,24 @@ class Config:
 
         self.validate()
 
+    @classmethod
+    def from_env(cls, **overrides: Any) -> "Config":
+        """Create config with environment variable overrides.
+
+        Environment variables follow the pattern DEEPWORM_<FIELD>, e.g.:
+        - DEEPWORM_PROVIDER=anthropic
+        - DEEPWORM_DEPTH=3
+        - DEEPWORM_BREADTH=6
+        - DEEPWORM_MODEL=gpt-4o
+        - DEEPWORM_OUTPUT_FORMAT=html
+        - DEEPWORM_VERBOSE=true
+
+        Explicit overrides take precedence over env vars.
+        """
+        env_config = _load_env_overrides()
+        env_config.update(overrides)
+        return cls(**env_config)
+
     def _detect_provider(self):
         """Auto-detect provider from environment variables."""
         if os.getenv("OPENAI_API_KEY"):
@@ -138,10 +156,15 @@ class Config:
 
     @classmethod
     def auto(cls) -> "Config":
-        """Create a Config with auto-detected settings, loading from config file if available."""
-        file_config = _load_config_file()
-        if file_config:
-            return cls(**file_config)
+        """Create a Config with auto-detected settings.
+
+        Priority: config file < environment variables < auto-detect.
+        """
+        file_config = _load_config_file() or {}
+        env_config = _load_env_overrides()
+        merged = {**file_config, **env_config}
+        if merged:
+            return cls(**merged)
         return cls()
 
     @classmethod
@@ -207,6 +230,57 @@ def _parse_toml_file(path: Path) -> dict[str, Any] | None:
     return {k: v for k, v in data.items() if k in valid_fields} or None
 
 
+# Environment variable prefix for config overrides
+_ENV_PREFIX = "DEEPWORM_"
+
+# Mapping from env var suffix to (field_name, type_converter)
+_ENV_FIELD_MAP: dict[str, tuple[str, type]] = {
+    "PROVIDER": ("provider", str),
+    "MODEL": ("model", str),
+    "API_KEY": ("api_key", str),
+    "BASE_URL": ("base_url", str),
+    "TEMPERATURE": ("temperature", float),
+    "DEPTH": ("depth", int),
+    "BREADTH": ("breadth", int),
+    "MAX_SOURCES": ("max_sources", int),
+    "OUTPUT_FORMAT": ("output_format", str),
+    "OUTPUT_FILE": ("output_file", str),
+    "VERBOSE": ("verbose", bool),
+    "SEARCH_REGION": ("search_region", str),
+    "SEARCH_MAX_RESULTS": ("search_max_results", int),
+    "SEARCH_PROVIDER": ("search_provider", str),
+    "MAX_REQUESTS_PER_MINUTE": ("max_requests_per_minute", int),
+    "TIMEOUT_SECONDS": ("timeout_seconds", int),
+}
+
+
+def _load_env_overrides() -> dict[str, Any]:
+    """Load config overrides from DEEPWORM_* environment variables.
+
+    Returns:
+        Dictionary of field_name → converted_value for any set env vars.
+    """
+    overrides: dict[str, Any] = {}
+
+    for suffix, (field_name, converter) in _ENV_FIELD_MAP.items():
+        value = os.getenv(f"{_ENV_PREFIX}{suffix}")
+        if value is None:
+            continue
+
+        try:
+            if converter is bool:
+                overrides[field_name] = value.lower() in ("1", "true", "yes", "on")
+            elif converter is int:
+                overrides[field_name] = int(value)
+            elif converter is float:
+                overrides[field_name] = float(value)
+            else:
+                overrides[field_name] = value
+        except (ValueError, TypeError):
+            # Skip malformed env var values
+            continue
+
+    return overrides
 def _parse_yaml_file(path: Path) -> dict[str, Any] | None:
     """Parse a YAML config file and extract deepworm settings."""
     try:
