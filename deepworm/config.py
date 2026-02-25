@@ -99,7 +99,7 @@ class Config:
         defaults = {
             "openai": "gpt-4o-mini",
             "anthropic": "claude-3-5-haiku-latest",
-            "google": "gemini-2.0-flash",
+            "google": "gemini-2.5-flash",
             "ollama": "llama3.2",
         }
         return defaults.get(provider or self.provider, "gpt-4o-mini")
