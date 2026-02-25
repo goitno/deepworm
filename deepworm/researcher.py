@@ -290,7 +290,7 @@ class DeepResearcher:
             if verbose:
                 console.print(f"[dim]Generated {len(queries)} search queries[/dim]")
                 for q in queries:
-                    console.print(f"  [dim]• {q}[/dim]")
+                    console.print(f"  [cyan]🔍 {q}[/cyan]")
                 # Show token usage after query generation
                 tracker = llm.token_tracker
                 console.print(
@@ -300,17 +300,20 @@ class DeepResearcher:
                 )
 
             # Search and fetch
+            if verbose:
+                console.print(f"\n[dim]  Searching the web...[/dim]")
             with self._metrics.time("search"):
                 new_sources = self._search_and_fetch(queries, verbose=verbose)
             state.sources.extend(new_sources)
 
             if verbose:
-                console.print(f"[dim]Fetched {len(new_sources)} sources[/dim]")
+                console.print(f"  [green]✓ Found {len(new_sources)} sources[/green]")
 
             # Analyze each source
             if verbose:
-                console.print("[dim]Analyzing sources...[/dim]")
+                console.print(f"\n[dim]  Analyzing sources with {self.config.model}...[/dim]")
 
+            analyzed_count = 0
             for source in new_sources:
                 if not source.content:
                     continue
@@ -322,6 +325,8 @@ class DeepResearcher:
                 # Apply filter hook
                 if not self.plugins.apply_filter_source(source.url, source.title, source.content):
                     continue
+                if verbose:
+                    console.print(f"  [dim]  ⏳ Analyzing: {source.title[:55]}...[/dim]")
                 findings = self._analyze_source(llm, topic, source)
                 # Apply post_analysis hook
                 findings = self.plugins.apply_post_analysis(topic, source.content, findings)
@@ -329,6 +334,14 @@ class DeepResearcher:
                 source.relevance = self._score_source(source, topic)
                 state.findings.append(findings)
                 self._metrics.increment("sources_analyzed")
+                analyzed_count += 1
+                if verbose:
+                    # Show brief finding preview
+                    preview = findings[:120].replace('\n', ' ').strip()
+                    console.print(f"  [green]  ✓[/green] [dim]{preview}...[/dim]")
+            
+            if verbose and analyzed_count > 0:
+                console.print(f"  [green]✓ Analyzed {analyzed_count} sources[/green]")
 
             elapsed = time.time() - t_iter
             self._progress(f"Completed iteration {i + 1}")
@@ -364,7 +377,8 @@ class DeepResearcher:
 
         # Synthesize
         if verbose:
-            console.print("\n[bold green]Synthesizing report...[/bold green]")
+            console.print(f"\n[bold green]✍  Synthesizing final report from {len(state.sources)} sources...[/bold green]")
+            console.print(f"  [dim]Using {self.config.model} to write comprehensive analysis[/dim]")
 
         self.events.emit(Event(
             type=EventType.SYNTHESIS_START,
@@ -575,7 +589,9 @@ class DeepResearcher:
                     source = future.result()
                     sources.append(source)
                     if verbose:
-                        console.print(f"  [dim]Fetched: {source.title[:60]}...[/dim]")
+                        content_len = len(source.content) if source.content else 0
+                        size_str = f"{content_len:,} chars" if content_len > 0 else "empty"
+                        console.print(f"  [dim]  📄 {source.title[:55]}  ({size_str})[/dim]")
                 except Exception:
                     pass
 
