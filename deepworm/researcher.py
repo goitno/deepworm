@@ -27,6 +27,7 @@ from .config import Config
 from .llm import LLMClient, get_client
 from .cache import Cache, get_cache
 from .events import Event, EventEmitter, EventType
+from .plugins import PluginManager
 from .search import SearchResult, fetch_page_text, search_web
 from .session import save_session
 
@@ -123,12 +124,14 @@ class DeepResearcher:
         on_progress: Optional[Callable[[str], None]] = None,
         cache: Optional[Cache] = None,
         events: Optional[EventEmitter] = None,
+        plugins: Optional[PluginManager] = None,
     ):
         self.config = config or Config.auto()
         self.client: Optional[LLMClient] = None
         self._on_progress = on_progress
         self.cache = cache if cache is not None else get_cache()
         self.events = events or EventEmitter()
+        self.plugins = plugins or PluginManager()
 
     def _progress(self, msg: str) -> None:
         if self._on_progress:
@@ -215,6 +218,9 @@ class DeepResearcher:
 
             state.queries.extend(queries)
 
+            # Apply plugin hooks
+            queries = self.plugins.apply_transform_queries(topic, queries)
+
             self.events.emit(Event(
                 type=EventType.QUERIES_GENERATED,
                 data={"queries": queries, "count": len(queries)},
@@ -240,7 +246,12 @@ class DeepResearcher:
             for source in new_sources:
                 if not source.content:
                     continue
+                # Apply filter hook
+                if not self.plugins.apply_filter_source(source.url, source.title, source.content):
+                    continue
                 findings = self._analyze_source(llm, topic, source)
+                # Apply post_analysis hook
+                findings = self.plugins.apply_post_analysis(topic, source.content, findings)
                 source.findings = findings
                 source.relevance = self._score_source(source, topic)
                 state.findings.append(findings)
@@ -271,6 +282,9 @@ class DeepResearcher:
         ))
 
         report = self._synthesize(llm, state, persona_context, stream=stream and verbose)
+
+        # Apply post_report hook
+        report = self.plugins.apply_post_report(topic, report)
 
         # Mark session as completed
         try:
