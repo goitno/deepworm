@@ -1,5 +1,9 @@
 # deepworm
 
+[![CI](https://github.com/bysiber/deepworm/actions/workflows/ci.yml/badge.svg)](https://github.com/bysiber/deepworm/actions/workflows/ci.yml)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
 Open-source deep research agent. Like OpenAI's Deep Research, but free and local.
 
 Give it a topic, it searches the web, reads sources, identifies gaps, digs deeper, and writes a comprehensive research report. Works with OpenAI, Anthropic, Google, or **completely free with Ollama** (local models).
