@@ -2026,6 +2026,19 @@ def _output_report(report: str, opts: argparse.Namespace) -> None:
     else:
         print_report(report)
 
+    # Always auto-save to ~/.deepworm/reports/
+    import re as _re
+    import time as _time
+    slug = _re.sub(r'[^\w\s-]', '', topic).strip()[:50]
+    slug = _re.sub(r'[\s]+', '_', slug).lower()
+    timestamp = _time.strftime("%Y%m%d_%H%M%S")
+    reports_dir = os.path.expanduser("~/.deepworm/reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    auto_path = os.path.join(reports_dir, f"{slug}_{timestamp}.md")
+    with open(auto_path, "w", encoding="utf-8") as _f:
+        _f.write(report)
+    console.print(f"[dim]📄 Auto-saved: {auto_path}[/dim]")
+
 
 if __name__ == "__main__":
     main()
