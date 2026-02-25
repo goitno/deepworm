@@ -351,7 +351,12 @@ class DeepResearcher:
 
         # Collect unique URLs from all queries
         for query in queries:
-            results = search_web(query, max_results=self.config.max_sources, cache=self.cache)
+            results = search_web(
+                query,
+                max_results=self.config.max_sources,
+                cache=self.cache,
+                provider=self.config.search_provider,
+            )
             for r in results:
                 if r.url not in seen_urls:
                     seen_urls.add(r.url)

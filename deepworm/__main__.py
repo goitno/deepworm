@@ -114,6 +114,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Stream the report as it generates (real-time output)",
     )
+    parser.add_argument(
+        "--search-provider",
+        type=str,
+        choices=["duckduckgo", "brave", "searxng"],
+        default=None,
+        help="Search engine provider (default: duckduckgo)",
+    )
     return parser
 
 
@@ -148,6 +155,8 @@ def main(args: list[str] | None = None) -> None:
         config.depth = opts.depth
     if opts.breadth:
         config.breadth = opts.breadth
+    if opts.search_provider:
+        config.search_provider = opts.search_provider
 
     # Comparison mode
     if opts.compare:

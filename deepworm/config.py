@@ -40,6 +40,7 @@ class Config:
     # Search settings
     search_region: str = "wt-wt"
     search_max_results: int = 8
+    search_provider: str = "duckduckgo"  # duckduckgo, brave, searxng
 
     def __post_init__(self):
         if self.api_key is None:

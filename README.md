@@ -129,6 +129,7 @@ deepworm "topic" --json                             # JSON output for piping
 deepworm "topic" --stream                           # stream report as it generates
 deepworm "topic" --persona "startup founder"        # research perspective
 deepworm "topic" --no-cache                         # skip disk cache
+deepworm "topic" --search-provider brave            # use Brave Search
 deepworm --compare "React" "Vue" "Svelte"           # compare topics
 deepworm --clear-cache                              # clear cached data
 deepworm                                            # interactive mode
@@ -143,6 +144,24 @@ deepworm --compare "PostgreSQL" "MySQL" "SQLite" -o comparison.md
 ```
 
 This researches each topic individually, then generates a structured comparison with tables and analysis.
+
+## Search Providers
+
+| Provider | Setup | Free? |
+|----------|-------|-------|
+| DuckDuckGo | None (default) | Yes |
+| Brave Search | `BRAVE_API_KEY` env var | Free tier (2k queries/mo) |
+| SearXNG | `SEARXNG_URL` env var (self-hosted) | Yes |
+
+```bash
+# Use Brave Search
+export BRAVE_API_KEY=BSA...
+deepworm "topic" --search-provider brave
+
+# Use self-hosted SearXNG
+export SEARXNG_URL=http://localhost:8888
+deepworm "topic" --search-provider searxng
+```
 
 ## Config File
 

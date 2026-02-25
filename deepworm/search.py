@@ -1,4 +1,7 @@
-"""Web search using DuckDuckGo."""
+"""Web search with multiple providers.
+
+Supports DuckDuckGo (default), Brave Search API, and SearXNG.
+"""
 
 from __future__ import annotations
 
@@ -34,8 +37,12 @@ def search_web(
     max_results: int = 8,
     region: str = "wt-wt",
     cache: "Cache | None" = None,
+    provider: str = "duckduckgo",
 ) -> list[SearchResult]:
-    """Search the web using DuckDuckGo HTML."""
+    """Search the web using the specified provider.
+
+    Providers: duckduckgo (default), brave, searxng
+    """
     # Check cache first
     if cache is not None:
         cached = cache.get("search", query)
@@ -44,11 +51,24 @@ def search_web(
             return [SearchResult(**r) for r in cached]
 
     results: list[SearchResult] = []
-    try:
-        # Try the duckduckgo_search / ddgs library first
-        results = _search_ddgs(query, max_results)
-    except Exception:
-        pass
+
+    if provider == "brave":
+        try:
+            results = _search_brave(query, max_results)
+        except Exception as e:
+            logger.debug("Brave search failed: %s", e)
+    elif provider == "searxng":
+        try:
+            results = _search_searxng(query, max_results)
+        except Exception as e:
+            logger.debug("SearXNG search failed: %s", e)
+
+    # Default/fallback: DuckDuckGo
+    if not results:
+        try:
+            results = _search_ddgs(query, max_results)
+        except Exception:
+            pass
 
     if not results:
         # Fallback: DuckDuckGo HTML scraping
@@ -210,3 +230,57 @@ def _extract_text_from_html(html: str) -> str:
     text = re.sub(r'[ \t]+', ' ', text)
 
     return text.strip()
+
+
+def _search_brave(query: str, max_results: int) -> list[SearchResult]:
+    """Search using Brave Search API. Requires BRAVE_API_KEY env var."""
+    import os
+
+    api_key = os.getenv("BRAVE_API_KEY", "")
+    if not api_key:
+        raise ValueError("BRAVE_API_KEY not set")
+
+    resp = httpx.get(
+        "https://api.search.brave.com/res/v1/web/search",
+        params={"q": query, "count": max_results},
+        headers={"X-Subscription-Token": api_key, "Accept": "application/json"},
+        timeout=15.0,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+
+    results = []
+    for item in data.get("web", {}).get("results", [])[:max_results]:
+        results.append(SearchResult(
+            title=item.get("title", ""),
+            url=item.get("url", ""),
+            snippet=item.get("description", ""),
+        ))
+    return results
+
+
+def _search_searxng(query: str, max_results: int) -> list[SearchResult]:
+    """Search using a SearXNG instance. Requires SEARXNG_URL env var."""
+    import os
+
+    base_url = os.getenv("SEARXNG_URL", "")
+    if not base_url:
+        raise ValueError("SEARXNG_URL not set")
+
+    resp = httpx.get(
+        f"{base_url.rstrip('/')}/search",
+        params={"q": query, "format": "json", "pageno": 1},
+        headers=_HEADERS,
+        timeout=15.0,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+
+    results = []
+    for item in data.get("results", [])[:max_results]:
+        results.append(SearchResult(
+            title=item.get("title", ""),
+            url=item.get("url", ""),
+            snippet=item.get("content", ""),
+        ))
+    return results
