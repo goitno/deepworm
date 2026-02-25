@@ -26,6 +26,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from .config import Config
 from .llm import LLMClient, get_client
 from .cache import Cache, get_cache
+from .events import Event, EventEmitter, EventType
 from .search import SearchResult, fetch_page_text, search_web
 from .session import save_session
 
@@ -121,11 +122,13 @@ class DeepResearcher:
         config: Optional[Config] = None,
         on_progress: Optional[Callable[[str], None]] = None,
         cache: Optional[Cache] = None,
+        events: Optional[EventEmitter] = None,
     ):
         self.config = config or Config.auto()
         self.client: Optional[LLMClient] = None
         self._on_progress = on_progress
         self.cache = cache if cache is not None else get_cache()
+        self.events = events or EventEmitter()
 
     def _progress(self, msg: str) -> None:
         if self._on_progress:
@@ -183,6 +186,13 @@ class DeepResearcher:
             console.print(Panel(info, title="deepworm research", border_style="blue"))
 
         t_start = time.time()
+        self._session_start = t_start
+
+        self.events.emit(Event(
+            type=EventType.RESEARCH_START,
+            data={"topic": topic, "depth": self.config.depth, "breadth": self.config.breadth},
+            message=f"Starting research: {topic}",
+        ))
 
         for i in range(self.config.depth):
             state.iterations_done = i + 1
@@ -191,6 +201,12 @@ class DeepResearcher:
             if verbose:
                 console.print(f"\n[bold cyan]--- Iteration {i + 1}/{self.config.depth} ---[/bold cyan]")
 
+            self.events.emit(Event(
+                type=EventType.ITERATION_START,
+                data={"iteration": i + 1, "total": self.config.depth},
+                message=f"Starting iteration {i + 1}/{self.config.depth}",
+            ))
+
             # Generate search queries
             if i == 0:
                 queries = self._generate_initial_queries(llm, topic)
@@ -198,6 +214,12 @@ class DeepResearcher:
                 queries = self._generate_followup_queries(llm, state)
 
             state.queries.extend(queries)
+
+            self.events.emit(Event(
+                type=EventType.QUERIES_GENERATED,
+                data={"queries": queries, "count": len(queries)},
+                message=f"Generated {len(queries)} search queries",
+            ))
 
             if verbose:
                 console.print(f"[dim]Generated {len(queries)} search queries[/dim]")
@@ -225,6 +247,13 @@ class DeepResearcher:
 
             elapsed = time.time() - t_iter
             self._progress(f"Completed iteration {i + 1}")
+
+            self.events.emit(Event(
+                type=EventType.ITERATION_END,
+                data={"iteration": i + 1, "elapsed": elapsed, "sources": len(new_sources)},
+                message=f"Iteration {i + 1} completed in {elapsed:.1f}s",
+            ))
+
             if verbose:
                 console.print(f"[dim]Iteration completed in {elapsed:.1f}s[/dim]")
 
@@ -234,6 +263,12 @@ class DeepResearcher:
         # Synthesize
         if verbose:
             console.print("\n[bold green]Synthesizing report...[/bold green]")
+
+        self.events.emit(Event(
+            type=EventType.SYNTHESIS_START,
+            data={"total_sources": len(state.sources)},
+            message="Starting synthesis",
+        ))
 
         report = self._synthesize(llm, state, persona_context, stream=stream and verbose)
 
@@ -254,6 +289,13 @@ class DeepResearcher:
             pass
 
         total_time = time.time() - t_start
+
+        self.events.emit(Event(
+            type=EventType.RESEARCH_COMPLETE,
+            data={"elapsed": total_time, "sources": len(state.sources), "iterations": state.iterations_done},
+            message=f"Research completed in {total_time:.1f}s",
+        ))
+
         if verbose:
             console.print(f"[bold green]Done![/bold green] [dim]({total_time:.1f}s total, {len(state.sources)} sources)[/dim]\n")
 

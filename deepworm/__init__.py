@@ -4,9 +4,10 @@ import logging
 
 __version__ = "0.1.0"
 
+from .events import Event, EventEmitter, EventType
 from .researcher import DeepResearcher
 
-__all__ = ["DeepResearcher", "__version__"]
+__all__ = ["DeepResearcher", "Event", "EventEmitter", "EventType", "__version__"]
 
 # Set up default logging (NullHandler to avoid "No handlers" warnings)
 logging.getLogger("deepworm").addHandler(logging.NullHandler())
