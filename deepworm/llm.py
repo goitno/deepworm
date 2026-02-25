@@ -57,6 +57,13 @@ class LLMClient:
     def chat(self, messages: list[dict[str, str]], temperature: float = 0.3) -> str:
         raise NotImplementedError
 
+    def stream(self, messages: list[dict[str, str]], temperature: float = 0.3):
+        """Stream chat response. Yields string chunks.
+
+        Default implementation falls back to non-streaming.
+        """
+        yield self.chat(messages, temperature=temperature)
+
     def chat_with_retry(
         self,
         messages: list[dict[str, str]],
@@ -106,6 +113,18 @@ class OpenAICompatibleClient(LLMClient):
         )
         return resp.choices[0].message.content or ""
 
+    def stream(self, messages: list[dict[str, str]], temperature: float = 0.3):
+        """Stream chat response from OpenAI/Ollama."""
+        resp = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=temperature,
+            stream=True,
+        )
+        for chunk in resp:
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+
 
 class AnthropicClient(LLMClient):
     """Client for Anthropic Claude."""
@@ -136,6 +155,29 @@ class AnthropicClient(LLMClient):
 
         resp = self.client.messages.create(**kwargs)
         return resp.content[0].text
+
+    def stream(self, messages: list[dict[str, str]], temperature: float = 0.3):
+        """Stream chat response from Anthropic."""
+        system_msg = ""
+        chat_messages = []
+        for m in messages:
+            if m["role"] == "system":
+                system_msg = m["content"]
+            else:
+                chat_messages.append(m)
+
+        kwargs: dict[str, Any] = {
+            "model": self.model,
+            "max_tokens": 4096,
+            "messages": chat_messages,
+            "temperature": temperature,
+        }
+        if system_msg:
+            kwargs["system"] = system_msg
+
+        with self.client.messages.stream(**kwargs) as stream:
+            for text in stream.text_stream:
+                yield text
 
 
 class GoogleClient(LLMClient):

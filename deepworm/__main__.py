@@ -101,6 +101,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Clear the cache and exit",
     )
+    parser.add_argument(
+        "--stream",
+        action="store_true",
+        help="Stream the report as it generates (real-time output)",
+    )
     return parser
 
 
@@ -173,6 +178,7 @@ def main(args: list[str] | None = None) -> None:
             opts.topic,
             verbose=not opts.quiet,
             persona=opts.persona,
+            stream=opts.stream,
         )
     except KeyboardInterrupt:
         console.print("\n[yellow]Research interrupted.[/yellow]")

@@ -13,6 +13,7 @@ Orchestrates the research loop:
 
 from __future__ import annotations
 
+import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -26,6 +27,9 @@ from .config import Config
 from .llm import LLMClient, get_client
 from .cache import Cache, get_cache
 from .search import SearchResult, fetch_page_text, search_web
+from .session import save_session
+
+logger = logging.getLogger(__name__)
 
 console = Console()
 
@@ -127,18 +131,38 @@ class DeepResearcher:
         if self._on_progress:
             self._on_progress(msg)
 
+    def _save_state(self, state: ResearchState) -> None:
+        """Auto-save research state for resume capability."""
+        try:
+            state_data = {
+                "topic": state.topic,
+                "queries": state.queries,
+                "sources": [
+                    {"url": s.url, "title": s.title, "findings": s.findings, "relevance": s.relevance}
+                    for s in state.sources
+                ],
+                "findings": state.findings,
+                "gaps": state.gaps,
+                "iterations_done": state.iterations_done,
+                "created_at": getattr(self, "_session_start", time.time()),
+            }
+            save_session(state.topic, state_data, status="in_progress")
+        except Exception as e:
+            logger.debug("Failed to save session: %s", e)
+
     def _get_client(self) -> LLMClient:
         if self.client is None:
             self.client = get_client(self.config)
         return self.client
 
-    def research(self, topic: str, verbose: bool = True, persona: str | None = None) -> str:
+    def research(self, topic: str, verbose: bool = True, persona: str | None = None, stream: bool = False) -> str:
         """Run deep research on a topic and return a markdown report.
 
         Args:
             topic: Research topic or question.
             verbose: Show progress output.
             persona: Optional perspective for the research (e.g. "startup founder").
+            stream: Stream the final report to terminal as it generates.
         """
         state = ResearchState(topic=topic)
         llm = self._get_client()
@@ -203,11 +227,30 @@ class DeepResearcher:
             if verbose:
                 console.print(f"[dim]Iteration completed in {elapsed:.1f}s[/dim]")
 
+            # Auto-save session state after each iteration
+            self._save_state(state)
+
         # Synthesize
         if verbose:
             console.print("\n[bold green]Synthesizing report...[/bold green]")
 
-        report = self._synthesize(llm, state, persona_context)
+        report = self._synthesize(llm, state, persona_context, stream=stream and verbose)
+
+        # Mark session as completed
+        try:
+            state_data = {
+                "topic": state.topic,
+                "queries": state.queries,
+                "sources": [
+                    {"url": s.url, "title": s.title, "findings": s.findings, "relevance": s.relevance}
+                    for s in state.sources
+                ],
+                "findings": state.findings,
+                "iterations_done": state.iterations_done,
+            }
+            save_session(state.topic, state_data, status="completed")
+        except Exception:
+            pass
 
         total_time = time.time() - t_start
         if verbose:
@@ -315,7 +358,7 @@ class DeepResearcher:
         except Exception as e:
             return f"Could not analyze: {e}"
 
-    def _synthesize(self, llm: LLMClient, state: ResearchState, persona_context: str = "") -> str:
+    def _synthesize(self, llm: LLMClient, state: ResearchState, persona_context: str = "", stream: bool = False) -> str:
         """Synthesize all findings into a final report."""
         # Build findings with source attribution
         parts = []
@@ -332,10 +375,25 @@ class DeepResearcher:
         if persona_context:
             prompt += f"\n\nAdditional context: {persona_context}"
 
+        messages = [
+            {"role": "system", "content": "You are an expert research report writer."},
+            {"role": "user", "content": prompt},
+        ]
+
+        if stream:
+            # Stream to terminal and collect
+            collected = []
+            import sys
+            console.print()  # newline before stream
+            for chunk in llm.stream(messages, temperature=0.4):
+                sys.stdout.write(chunk)
+                sys.stdout.flush()
+                collected.append(chunk)
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            return "".join(collected)
+
         try:
-            return llm.chat([
-                {"role": "system", "content": "You are an expert research report writer."},
-                {"role": "user", "content": prompt},
-            ], temperature=0.4)
+            return llm.chat(messages, temperature=0.4)
         except Exception as e:
             return f"# Research: {state.topic}\n\nError synthesizing report: {e}\n\n## Raw Findings\n\n" + all_findings
