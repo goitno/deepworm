@@ -7,6 +7,17 @@ import json
 import logging
 import os
 import sys
+import warnings
+
+# Suppress noisy third-party warnings
+warnings.filterwarnings("ignore", category=FutureWarning, module=r"google\.auth")
+warnings.filterwarnings("ignore", category=FutureWarning, module=r"google\.oauth2")
+warnings.filterwarnings("ignore", category=DeprecationWarning, module=r"google")
+warnings.filterwarnings("ignore", message=r".*NotOpenSSLWarning.*")
+warnings.filterwarnings("ignore", category=Warning, module=r"urllib3")
+warnings.filterwarnings("ignore", message=r".*non-text parts.*")
+warnings.filterwarnings("ignore", message=r".*thought_signature.*")
+warnings.filterwarnings("ignore", category=RuntimeWarning, module=r"duckduckgo_search")
 
 from rich.console import Console
 from rich.panel import Panel

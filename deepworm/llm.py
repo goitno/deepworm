@@ -325,12 +325,18 @@ class GoogleClient(LLMClient):
 
     def __init__(self, api_key: str, model: str):
         super().__init__()
+        import warnings
+        warnings.filterwarnings("ignore", category=FutureWarning, module=r"google")
+        warnings.filterwarnings("ignore", message=r".*non-text parts.*")
+        warnings.filterwarnings("ignore", message=r".*thought_signature.*")
         from google import genai
         self._client = genai.Client(api_key=api_key)
         self.model_name = model
         self.model = model  # for base class access
 
     def chat(self, messages: list[dict[str, str]], temperature: float = 0.3) -> str:
+        import warnings
+        warnings.filterwarnings("ignore", message=r".*non-text parts.*")
         from google.genai import types
 
         # Convert messages to prompt text
@@ -339,11 +345,26 @@ class GoogleClient(LLMClient):
             parts.append(m["content"])
         prompt_text = "\n\n".join(parts)
 
-        resp = self._client.models.generate_content(
-            model=self.model_name,
-            contents=prompt_text,
-            config=types.GenerateContentConfig(temperature=temperature),
-        )
+        try:
+            resp = self._client.models.generate_content(
+                model=self.model_name,
+                contents=prompt_text,
+                config=types.GenerateContentConfig(temperature=temperature),
+            )
+        except Exception as e:
+            err_str = str(e)
+            if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                # Extract retry delay if available
+                import re
+                retry_match = re.search(r"retry in (\d+)", err_str, re.IGNORECASE)
+                wait_str = f" (retry in {retry_match.group(1)}s)" if retry_match else ""
+                from .exceptions import DeepWormError
+                raise DeepWormError(
+                    f"Rate limit exceeded for {self.model_name}{wait_str}",
+                    hint="Free tier: 20 requests/day per model. Wait or switch model with /set model <name>",
+                ) from e
+            raise
+
         result_text = resp.text or ""
 
         # Track token usage
