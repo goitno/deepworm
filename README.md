@@ -124,6 +124,8 @@ deepworm "topic" -b 6                               # 6 queries per iteration (b
 deepworm "topic" -m gpt-4o                          # use specific model
 deepworm "topic" -p ollama                          # force Ollama provider
 deepworm "topic" -o report.md                       # save to file
+deepworm "topic" -o report.html                     # save as HTML (dark mode)
+deepworm "topic" -f html                            # force HTML format
 deepworm "topic" -q                                 # quiet mode
 deepworm "topic" --json                             # JSON output for piping
 deepworm "topic" --stream                           # stream report as it generates
@@ -132,6 +134,11 @@ deepworm "topic" --no-cache                         # skip disk cache
 deepworm "topic" --search-provider brave            # use Brave Search
 deepworm --compare "React" "Vue" "Svelte"           # compare topics
 deepworm --clear-cache                              # clear cached data
+deepworm --history                                  # show last 10 researches
+deepworm --history 20                               # show last 20 researches
+deepworm --history-search "quantum"                 # search history
+deepworm --history-stats                            # aggregate stats
+deepworm --history-clear                            # clear all history
 deepworm                                            # interactive mode
 ```
 
@@ -213,6 +220,86 @@ from deepworm.compare import compare
 report = compare(["React", "Vue", "Svelte"])
 ```
 
+### Async API
+
+```python
+import asyncio
+from deepworm import AsyncResearcher, async_research
+
+async def main():
+    # Simple
+    report = await async_research("your topic")
+
+    # Concurrent research
+    tasks = [async_research(t) for t in ["topic A", "topic B", "topic C"]]
+    reports = await asyncio.gather(*tasks)
+```
+
+### Events
+
+```python
+from deepworm import DeepResearcher, EventEmitter, EventType
+
+emitter = EventEmitter()
+
+@emitter.on(EventType.ITERATION_END)
+def on_iteration(event):
+    print(f"Iteration {event.data['iteration']} done in {event.data['elapsed']:.1f}s")
+
+researcher = DeepResearcher(events=emitter)
+report = researcher.research("your topic")
+```
+
+### Plugins
+
+```python
+from deepworm import DeepResearcher
+from deepworm.plugins import PluginManager
+
+pm = PluginManager()
+
+@pm.hook("filter_source")
+def block_domains(url, title):
+    return "pinterest.com" not in url
+
+@pm.hook("post_report")
+def add_disclaimer(report):
+    return report + "\n\n*AI-generated content — verify from primary sources.*"
+
+researcher = DeepResearcher(plugins=pm)
+report = researcher.research("your topic")
+```
+
+### Citations
+
+```python
+from deepworm.citations import Citation, format_citations
+
+citations = [
+    Citation(url="https://arxiv.org/abs/2401.12345", title="Deep Learning Paper", author="Smith, J."),
+    Citation(url="https://nature.com/article", title="Nature Study"),
+]
+
+print(format_citations(citations, style="apa"))    # APA format
+print(format_citations(citations, style="bibtex")) # BibTeX format
+```
+
+### Research History
+
+```python
+from deepworm.history import list_entries, search_history, stats
+
+# List recent research
+for entry in list_entries(limit=10):
+    print(f"{entry.created_iso} - {entry.topic}")
+
+# Search history
+results = search_history("quantum")
+
+# Aggregate stats
+print(stats())  # total researches, avg time, models used, etc.
+```
+
 ## vs. gpt-researcher
 
 | | deepworm | gpt-researcher |
@@ -223,8 +310,14 @@ report = compare(["React", "Vue", "Svelte"])
 | Streaming | Built-in `--stream` | Requires WebSocket |
 | Caching | Disk cache (24h TTL) | No built-in cache |
 | Session resume | Auto-save after each iteration | No |
+| Plugin system | 6 hook types | No |
+| Event system | 13 event types | Custom callbacks |
+| Async API | Built-in `AsyncResearcher` | Async by default |
+| Citations | APA, MLA, Chicago, BibTeX | No |
+| Research history | Persistent JSONL log | No |
+| Search providers | 3 (DDG, Brave, SearXNG) | 5+ |
 | Dependencies | 3 packages | 30+ packages |
-| Lines of code | ~800 | ~10,000+ |
+| Lines of code | ~1,500 | ~10,000+ |
 | Web UI | No (CLI-first) | Yes |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
@@ -233,6 +326,13 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 
 - **Iterative deep research** — search → analyze → identify gaps → dig deeper
 - **Multi-provider** — OpenAI, Anthropic, Google, or free with Ollama
+- **Plugin system** — 6 hook types for full pipeline customization
+- **Event system** — 13 event types for progress tracking and UI integration
+- **Async API** — `AsyncResearcher` for web frameworks (FastAPI, etc.)
+- **Citation formatting** — APA, MLA, Chicago, and BibTeX styles
+- **Research history** — persistent log with search, stats, and CLI integration
+- **HTML export** — responsive reports with automatic dark mode
+- **Multiple search engines** — DuckDuckGo, Brave Search, SearXNG
 - **Disk cache** — 24h cached search results and pages (`--no-cache` to skip)
 - **Streaming** — watch the report generate in real-time (`--stream`)
 - **Comparison mode** — research and compare multiple topics side by side
@@ -240,9 +340,11 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Session save/resume** — auto-saves state after each iteration
 - **Config file** — `deepworm.toml` or `pyproject.toml [tool.deepworm]`
 - **Source scoring** — quality heuristics prioritize better sources
-- **Retry logic** — exponential backoff for transient LLM failures
+- **Custom exceptions** — user-friendly error messages with hints
+- **Retry logic** — exponential backoff for transient failures
 - **Concurrent fetching** — parallel page downloads for speed
 - **JSON output** — pipe results to other tools (`--json`)
+- **Typed** — full `py.typed` marker for IDE support
 
 ## License
 
