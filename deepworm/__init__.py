@@ -24,6 +24,7 @@ from .languages import Language, get_language, list_languages
 from .planner import ResearchPlan, generate_plan, estimate_complexity
 from .researcher import DeepResearcher
 from .scoring import QualityScore, score_report
+from .validator import ValidationResult, validate_topic
 
 __all__ = [
     "APIKeyError",
@@ -45,6 +46,7 @@ __all__ = [
     "ResearchPlan",
     "SearchError",
     "SessionError",
+    "ValidationResult",
     "__version__",
     "async_research",
     "estimate_complexity",
@@ -54,6 +56,7 @@ __all__ = [
     "research",
     "research_chain",
     "score_report",
+    "validate_topic",
 ]
 
 # Set up default logging (NullHandler to avoid "No handlers" warnings)

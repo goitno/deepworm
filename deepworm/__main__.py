@@ -602,6 +602,20 @@ def main(args: list[str] | None = None) -> None:
             return
         opts.topic = topic.strip()
 
+    # Validate topic
+    from .validator import validate_topic
+    validation = validate_topic(opts.topic)
+    if not validation.is_valid:
+        console.print(f"[red bold]Invalid topic:[/red bold] {validation.error}")
+        return
+    opts.topic = validation.topic
+    if validation.has_warnings:
+        for w in validation.warnings:
+            console.print(f"[yellow]⚠ {w}[/yellow]")
+    if validation.has_suggestions:
+        for s in validation.suggestions:
+            console.print(f"[dim]💡 {s}[/dim]")
+
     # Research planning
     if getattr(opts, "plan", False) or getattr(opts, "plan_only", False):
         from .planner import generate_plan, estimate_complexity
