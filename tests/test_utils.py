@@ -2,7 +2,17 @@
 
 import time
 
-from deepworm.utils import RateLimiter, estimate_cost, estimate_tokens, truncate_text
+import pytest
+
+from deepworm.utils import (
+    RateLimiter,
+    chunk_text,
+    estimate_cost,
+    estimate_tokens,
+    retry,
+    sanitize_filename,
+    truncate_text,
+)
 
 
 def test_estimate_tokens():
@@ -59,3 +69,117 @@ def test_rate_limiter_context_manager():
     limiter = RateLimiter(max_calls=10, period=1.0)
     with limiter:
         pass  # Should not raise
+
+
+# ── retry decorator tests ──
+
+
+def test_retry_succeeds_first_try():
+    call_count = 0
+
+    @retry(max_retries=3, base_delay=0.01)
+    def succeed():
+        nonlocal call_count
+        call_count += 1
+        return "ok"
+
+    assert succeed() == "ok"
+    assert call_count == 1
+
+
+def test_retry_succeeds_after_failures():
+    call_count = 0
+
+    @retry(max_retries=3, base_delay=0.01)
+    def flaky():
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
+            raise ValueError("not yet")
+        return "ok"
+
+    assert flaky() == "ok"
+    assert call_count == 3
+
+
+def test_retry_exhausted():
+    @retry(max_retries=2, base_delay=0.01)
+    def always_fail():
+        raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError, match="boom"):
+        always_fail()
+
+
+def test_retry_specific_exceptions():
+    call_count = 0
+
+    @retry(max_retries=3, base_delay=0.01, exceptions=(ValueError,))
+    def wrong_type():
+        nonlocal call_count
+        call_count += 1
+        raise TypeError("not caught")
+
+    with pytest.raises(TypeError):
+        wrong_type()
+    assert call_count == 1  # No retries for TypeError
+
+
+def test_retry_on_retry_callback():
+    attempts = []
+
+    def track(attempt, exc):
+        attempts.append(attempt)
+
+    @retry(max_retries=2, base_delay=0.01, on_retry=track)
+    def flaky():
+        if len(attempts) < 2:
+            raise ValueError("oops")
+        return "ok"
+
+    assert flaky() == "ok"
+    assert attempts == [1, 2]
+
+
+# ── sanitize_filename tests ──
+
+
+def test_sanitize_filename_basic():
+    assert sanitize_filename("Hello World!") == "Hello_World"
+
+
+def test_sanitize_filename_special_chars():
+    assert sanitize_filename("file/with:bad*chars?") == "filewithbadchars"
+
+
+def test_sanitize_filename_max_length():
+    long_name = "a" * 200
+    assert len(sanitize_filename(long_name)) == 100
+
+
+def test_sanitize_filename_empty():
+    assert sanitize_filename("!!!") == "untitled"
+
+
+# ── chunk_text tests ──
+
+
+def test_chunk_text_short():
+    assert chunk_text("short text", max_chars=100) == ["short text"]
+
+
+def test_chunk_text_splits():
+    text = "First sentence. Second sentence. Third sentence. Fourth sentence."
+    chunks = chunk_text(text, max_chars=40, overlap=10)
+    assert len(chunks) >= 2
+    # All text should be covered
+    combined = " ".join(chunks)
+    assert "First" in combined
+    assert "Fourth" in combined
+
+
+def test_chunk_text_overlap():
+    text = "A" * 100 + ". " + "B" * 100
+    chunks = chunk_text(text, max_chars=110, overlap=20)
+    assert len(chunks) >= 2
+

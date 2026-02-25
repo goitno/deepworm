@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
+import functools
+import logging
 import threading
 import time
+from typing import Any, Callable, TypeVar
+
+logger = logging.getLogger("deepworm")
+
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def estimate_tokens(text: str) -> int:
@@ -88,3 +95,97 @@ class RateLimiter:
 
     def __exit__(self, *args):
         pass
+
+
+def retry(
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    max_delay: float = 30.0,
+    exceptions: tuple[type[Exception], ...] = (Exception,),
+    on_retry: Callable[[int, Exception], None] | None = None,
+) -> Callable[[F], F]:
+    """Decorator for retrying a function with exponential backoff.
+
+    Args:
+        max_retries: Maximum number of retry attempts.
+        base_delay: Initial delay between retries in seconds.
+        max_delay: Maximum delay cap in seconds.
+        exceptions: Tuple of exception types to catch.
+        on_retry: Optional callback ``(attempt, exception)`` called before each retry.
+
+    Example::
+
+        @retry(max_retries=3)
+        def fetch_data(url):
+            return httpx.get(url).text
+    """
+
+    def decorator(func: F) -> F:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            last_error: Exception | None = None
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_error = e
+                    if attempt < max_retries:
+                        delay = min(base_delay * (2 ** attempt), max_delay)
+                        if on_retry:
+                            on_retry(attempt + 1, e)
+                        else:
+                            logger.debug(
+                                "%s failed (attempt %d/%d), retrying in %.1fs: %s",
+                                func.__name__, attempt + 1, max_retries, delay, e,
+                            )
+                        time.sleep(delay)
+            raise last_error  # type: ignore[misc]
+
+        return wrapper  # type: ignore[return-value]
+
+    return decorator
+
+
+def sanitize_filename(name: str, max_length: int = 100) -> str:
+    """Convert a string to a safe filename.
+
+    Replaces special characters and limits length.
+    """
+    import re
+
+    safe = re.sub(r'[^\w\s.-]', '', name)
+    safe = re.sub(r'\s+', '_', safe.strip())
+    return safe[:max_length] or "untitled"
+
+
+def chunk_text(text: str, max_chars: int = 4000, overlap: int = 200) -> list[str]:
+    """Split text into overlapping chunks at sentence boundaries.
+
+    Useful for processing long documents within token limits.
+
+    Args:
+        text: The text to split.
+        max_chars: Maximum characters per chunk.
+        overlap: Number of overlapping characters between chunks.
+    """
+    if len(text) <= max_chars:
+        return [text]
+
+    chunks: list[str] = []
+    start = 0
+    while start < len(text):
+        end = start + max_chars
+
+        if end < len(text):
+            # Try to break at sentence boundary
+            for sep in ('. ', '.\n', '\n\n', '\n', ' '):
+                boundary = text.rfind(sep, start + max_chars // 2, end)
+                if boundary != -1:
+                    end = boundary + len(sep)
+                    break
+
+        chunks.append(text[start:end].strip())
+        start = end - overlap
+
+    return chunks
+
