@@ -6,7 +6,11 @@
 
 AI deep research tool that searches the web, reads sources, and synthesizes findings into comprehensive reports.
 
-**Works 100% free** with Ollama (local LLM) + DuckDuckGo (no API key needed for search). Also supports OpenAI, Google Gemini, and Anthropic Claude.
+<p align="center">
+  <img src="demo.gif" alt="deepworm demo" width="800">
+</p>
+
+**Works 100% free** with Ollama (local LLM) + DuckDuckGo (no API key needed for search). Also supports OpenAI, Google Gemini, Anthropic Claude, and [OpenRouter](https://openrouter.ai/) (200+ models).
 
 No Langchain dependency. No paid search APIs required. Just `pip install deepworm` and go.
 
@@ -19,14 +23,20 @@ pip install deepworm
 ### Set up an API key (choose one)
 
 ```bash
-# Option 1: OpenAI
-export OPENAI_API_KEY="sk-..."
-
-# Option 2: Google Gemini
+# Option 1: Google Gemini (recommended, free tier available)
 export GOOGLE_API_KEY="AIza..."
 
-# Option 3: Anthropic Claude
+# Option 2: OpenRouter (200+ models, free & paid)
+export OPENROUTER_API_KEY="sk-or-..."
+
+# Option 3: OpenAI
+export OPENAI_API_KEY="sk-..."
+
+# Option 4: Anthropic Claude
 export ANTHROPIC_API_KEY="sk-ant..."
+
+# Option 5: Ollama (fully local, no key needed)
+# Just install Ollama and pull a model
 ```
 
 ### Run a research
@@ -45,24 +55,52 @@ That's it. DeepWorm will:
 ## Command Line Options
 
 ```bash
-# Control research depth
-deepworm "topic" --depth 3 --breadth 5
+# Control research depth and breadth
+deepworm "topic" --depth 2 --breadth 3
+
+# Verbose mode (see searches, pages, analysis in real-time)
+deepworm "topic" -v
 
 # Save report to file
 deepworm "topic" --output report.md
 
+# Auto-polish analysis (readability, quality score, compliance)
+deepworm "topic" --polish
+
+# Knowledge graph extraction
+deepworm "topic" --graph              # Mermaid diagram
+deepworm "topic" --graph stats        # Top connected concepts table
+
+# Full pipeline
+deepworm "topic" -v --polish --graph stats
+
 # Choose provider
 deepworm "topic" --provider google
+deepworm "topic" --provider openrouter --model google/gemini-2.0-flash-001
 
 # Compare topics
 deepworm compare "Python" "Rust"
 
-# Interactive mode
-deepworm interactive
-
 # See all options
 deepworm --help
 ```
+
+## Interactive Mode (TUI)
+
+```bash
+deepworm interactive
+```
+
+Features:
+- **Arrow-key menu navigation** — navigate commands without typing
+- **`/keys`** — manage API keys interactively (saved to `~/.deepworm_keys`)
+- **`/models`** — browse and switch models with arrow keys
+- **`/set`** — change depth, breadth, model inline
+- **`/last`** — view last research report
+- **`/graph`** — extract knowledge graph from last report
+- **`/polish`** — run quality analysis on last report
+- **Command history** — arrow up/down to recall previous queries
+- **Auto-save** — all reports saved to `~/.deepworm/reports/`
 
 ## Python API
 
@@ -76,12 +114,13 @@ print(result.report)
 
 ## Supported Providers
 
-| Provider | Env Variable | Models |
-|---|---|---|
-| OpenAI | `OPENAI_API_KEY` | gpt-4o, gpt-4o-mini |
-| Google | `GOOGLE_API_KEY` | gemini-pro, gemini-flash |
-| Anthropic | `ANTHROPIC_API_KEY` | claude-3.5, claude-3 haiku |
-| Ollama | (none, local) | llama3, mistral |
+| Provider | Env Variable | Default Model | Notes |
+|---|---|---|---|
+| Google | `GOOGLE_API_KEY` | gemini-2.5-flash-lite | Free tier available |
+| OpenRouter | `OPENROUTER_API_KEY` | gemini-2.0-flash-001 | 200+ models, free & paid |
+| OpenAI | `OPENAI_API_KEY` | gpt-4o-mini | |
+| Anthropic | `ANTHROPIC_API_KEY` | claude-3-5-haiku-latest | |
+| Ollama | (none, local) | llama3.2 | Fully offline |
 
 ## Configuration
 
@@ -97,17 +136,20 @@ output_dir: ./reports
 
 ## Key Features
 
-- Multi-provider LLM support (OpenAI, Google, Anthropic, Ollama)
-- Recursive deep research with configurable depth and breadth
+- **Multi-provider LLM support** — OpenAI, Google Gemini, Anthropic, OpenRouter (200+ models), Ollama
+- **Recursive deep research** with configurable depth and breadth
+- **Interactive TUI** with arrow-key navigation, command menu, and auto-save
+- **Knowledge graph extraction** — Mermaid, DOT, stats, JSON formats
+- **Polish pipeline** — readability scoring, compliance checks, quality grades (A-F)
+- **Auto-save reports** to `~/.deepworm/reports/` (both CLI and interactive)
+- **API key management** — `/keys` command saves keys securely to `~/.deepworm_keys`
 - Markdown reports with citations and source links
 - Comparison mode for side-by-side analysis
 - Research chains for multi-step investigations
 - Built-in retry and rate limiting
 - DuckDuckGo search (no API key needed for search)
-- Interactive mode for exploratory research
-- Research history and caching
-- Template system for repeatable research
-- Rich terminal output with progress tracking
+- Rich terminal output with emoji progress tracking
+- Token usage tracking per research
 - Extensible plugin system
 
 ## License
