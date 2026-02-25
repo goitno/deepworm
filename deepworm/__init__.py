@@ -6,6 +6,7 @@ __version__ = "0.5.0"
 
 from .async_api import AsyncResearcher, async_research
 from .chain import research_chain
+from .credibility import CredibilityReport, CredibilityScore, score_source, score_sources
 from .events import Event, EventEmitter, EventType
 from .exceptions import (
     APIKeyError,
@@ -21,6 +22,7 @@ from .exceptions import (
 )
 from .history import HistoryEntry
 from .languages import Language, get_language, list_languages
+from .notion import NotionBlock, NotionPage, export_notion_json, markdown_to_notion
 from .outline import OutlineSection, ReportOutline, generate_outline, outline_from_report
 from .planner import ResearchPlan, generate_plan, estimate_complexity
 from .researcher import DeepResearcher
@@ -32,6 +34,8 @@ __all__ = [
     "AsyncResearcher",
     "ConfigError",
     "ContentExtractionError",
+    "CredibilityReport",
+    "CredibilityScore",
     "DeepResearcher",
     "DeepWormError",
     "Event",
@@ -41,6 +45,8 @@ __all__ = [
     "Language",
     "ModelNotFoundError",
     "NetworkError",
+    "NotionBlock",
+    "NotionPage",
     "OutlineSection",
     "ProviderError",
     "QualityScore",
@@ -53,14 +59,18 @@ __all__ = [
     "__version__",
     "async_research",
     "estimate_complexity",
+    "export_notion_json",
     "generate_outline",
     "generate_plan",
     "get_language",
     "list_languages",
+    "markdown_to_notion",
     "outline_from_report",
     "research",
     "research_chain",
     "score_report",
+    "score_source",
+    "score_sources",
     "validate_topic",
 ]
 
