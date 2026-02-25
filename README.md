@@ -527,7 +527,11 @@ tracker.complete()
 | Audit trail | Action logging, SHA-256 checksums, policies | No |
 | Markdown formatter | List/table/emphasis normalization, heading IDs | No |
 | Knowledge graph | Relationship analysis, BFS, Mermaid/Graphviz | No |
-| Lines of code | ~27,000 | ~10,000+ |
+| Template engine | Jinja2-like, inheritance, macros, 16 filters | No |
+| Content security | XSS/SSRF/PII/secret scanning, sanitization | No |
+| Advanced caching | LRU/LFU/FIFO, tiered cache, memoize decorator | No |
+| Diagnostics | Health checks, profiling, self-test, env info | No |
+| Lines of code | ~31,000 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -610,6 +614,10 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Audit trail** — action logging with SHA-256 checksums, UUID entries, configurable policies
 - **Markdown formatter** — list/table/emphasis normalization, heading IDs, language labels
 - **Knowledge graph** — document relationship analysis, BFS path finding, Mermaid/Graphviz export
+- **Template engine** — Jinja2-like syntax, conditionals, loops, inheritance, macros, 16 built-in filters
+- **Content security** — XSS/SSRF/PII/secret scanning, HTML sanitization, content policies
+- **Advanced caching** — LRU/LFU/FIFO eviction, tiered cache, compute cache, memoize decorator
+- **Diagnostics** — health checks, dependency verification, performance profiling, self-test
 
 ## License
 
