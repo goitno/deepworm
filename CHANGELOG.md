@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - TOML config file support (`deepworm.toml`, `.deepworm.toml`, `pyproject.toml [tool.deepworm]`)
-- Cache layer for search results and LLM responses
+- Disk cache layer for search results and page content (24h TTL, `--no-cache`, `--clear-cache`)
+- Streaming output for real-time report generation (`--stream`)
+- Research session save/resume with auto-save after each iteration
+- Source quality scoring with domain authority heuristics and keyword overlap
+- Thread-safe rate limiter utility
+- 53 tests (up from 36)
 
 ## [0.1.0] - 2025-01-20
 

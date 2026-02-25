@@ -126,8 +126,11 @@ deepworm "topic" -p ollama                          # force Ollama provider
 deepworm "topic" -o report.md                       # save to file
 deepworm "topic" -q                                 # quiet mode
 deepworm "topic" --json                             # JSON output for piping
+deepworm "topic" --stream                           # stream report as it generates
 deepworm "topic" --persona "startup founder"        # research perspective
+deepworm "topic" --no-cache                         # skip disk cache
 deepworm --compare "React" "Vue" "Svelte"           # compare topics
+deepworm --clear-cache                              # clear cached data
 deepworm                                            # interactive mode
 ```
 
@@ -198,11 +201,29 @@ report = compare(["React", "Vue", "Svelte"])
 | Install | `pip install deepworm` | Docker + multiple services |
 | Setup | One env var (or zero for Ollama) | Multiple API keys + config files |
 | Local models | Ollama out of the box | Limited |
+| Streaming | Built-in `--stream` | Requires WebSocket |
+| Caching | Disk cache (24h TTL) | No built-in cache |
+| Session resume | Auto-save after each iteration | No |
 | Dependencies | 3 packages | 30+ packages |
-| Lines of code | ~500 | ~10,000+ |
+| Lines of code | ~800 | ~10,000+ |
 | Web UI | No (CLI-first) | Yes |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
+
+## Features
+
+- **Iterative deep research** — search → analyze → identify gaps → dig deeper
+- **Multi-provider** — OpenAI, Anthropic, Google, or free with Ollama
+- **Disk cache** — 24h cached search results and pages (`--no-cache` to skip)
+- **Streaming** — watch the report generate in real-time (`--stream`)
+- **Comparison mode** — research and compare multiple topics side by side
+- **Persona mode** — adjust perspective (e.g. "PhD student", "startup founder")
+- **Session save/resume** — auto-saves state after each iteration
+- **Config file** — `deepworm.toml` or `pyproject.toml [tool.deepworm]`
+- **Source scoring** — quality heuristics prioritize better sources
+- **Retry logic** — exponential backoff for transient LLM failures
+- **Concurrent fetching** — parallel page downloads for speed
+- **JSON output** — pipe results to other tools (`--json`)
 
 ## License
 

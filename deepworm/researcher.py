@@ -220,6 +220,7 @@ class DeepResearcher:
                     continue
                 findings = self._analyze_source(llm, topic, source)
                 source.findings = findings
+                source.relevance = self._score_source(source, topic)
                 state.findings.append(findings)
 
             elapsed = time.time() - t_iter
@@ -358,13 +359,64 @@ class DeepResearcher:
         except Exception as e:
             return f"Could not analyze: {e}"
 
+    @staticmethod
+    def _score_source(source: Source, topic: str) -> float:
+        """Score source quality (0.0-1.0) based on heuristics.
+
+        Factors: content length, findings length, domain authority signals,
+        keyword overlap with topic.
+        """
+        score = 0.0
+
+        # Content length (longer = likely more substantive)
+        content_len = len(source.content)
+        if content_len > 3000:
+            score += 0.25
+        elif content_len > 1000:
+            score += 0.15
+        elif content_len > 300:
+            score += 0.05
+
+        # Findings length (more analysis = more relevant)
+        findings_len = len(source.findings)
+        if findings_len > 500:
+            score += 0.25
+        elif findings_len > 200:
+            score += 0.15
+        elif findings_len > 50:
+            score += 0.05
+
+        # Domain authority heuristics
+        url = source.url.lower()
+        high_quality_domains = [
+            '.edu', '.gov', '.org', 'arxiv.org', 'nature.com', 'science.org',
+            'ieee.org', 'acm.org', 'springer.com', 'wiley.com',
+            'wikipedia.org', 'github.com', 'stackoverflow.com',
+        ]
+        if any(d in url for d in high_quality_domains):
+            score += 0.25
+
+        # Keyword overlap
+        topic_words = set(topic.lower().split())
+        content_lower = source.content.lower()
+        matches = sum(1 for w in topic_words if w in content_lower and len(w) > 3)
+        if topic_words:
+            overlap = matches / len(topic_words)
+            score += min(0.25, overlap * 0.25)
+
+        return min(1.0, score)
+
     def _synthesize(self, llm: LLMClient, state: ResearchState, persona_context: str = "", stream: bool = False) -> str:
         """Synthesize all findings into a final report."""
-        # Build findings with source attribution
+        # Build findings with source attribution, sorted by relevance
+        scored_sources = sorted(
+            [s for s in state.sources if s.findings],
+            key=lambda s: s.relevance,
+            reverse=True,
+        )
         parts = []
-        for source in state.sources:
-            if source.findings:
-                parts.append(f"### {source.title}\nURL: {source.url}\n{source.findings}")
+        for source in scored_sources:
+            parts.append(f"### {source.title}\nURL: {source.url}\nRelevance: {source.relevance:.2f}\n{source.findings}")
 
         all_findings = "\n\n".join(parts) if parts else "No detailed findings available."
 

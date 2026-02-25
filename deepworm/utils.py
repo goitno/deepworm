@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import threading
+import time
+
 
 def estimate_tokens(text: str) -> int:
     """Rough estimate of token count (approx 4 chars per token)."""
@@ -41,3 +44,47 @@ def truncate_text(text: str, max_chars: int = 4000) -> str:
     if last_space > max_chars * 0.8:
         truncated = truncated[:last_space]
     return truncated + "..."
+
+
+class RateLimiter:
+    """Thread-safe token bucket rate limiter.
+
+    Limits the rate of operations (e.g., API calls, HTTP requests).
+    """
+
+    def __init__(self, max_calls: int, period: float = 1.0):
+        """Initialize rate limiter.
+
+        Args:
+            max_calls: Maximum number of calls allowed in the period.
+            period: Time period in seconds (default: 1 second).
+        """
+        self.max_calls = max_calls
+        self.period = period
+        self._lock = threading.Lock()
+        self._calls: list[float] = []
+
+    def acquire(self) -> None:
+        """Wait until a call is allowed under the rate limit."""
+        with self._lock:
+            now = time.time()
+            # Remove expired entries
+            self._calls = [t for t in self._calls if now - t < self.period]
+
+            if len(self._calls) >= self.max_calls:
+                # Need to wait
+                sleep_time = self._calls[0] + self.period - now
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
+                # Clean up again
+                now = time.time()
+                self._calls = [t for t in self._calls if now - t < self.period]
+
+            self._calls.append(time.time())
+
+    def __enter__(self):
+        self.acquire()
+        return self
+
+    def __exit__(self, *args):
+        pass

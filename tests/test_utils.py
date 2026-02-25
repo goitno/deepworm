@@ -1,6 +1,8 @@
 """Tests for deepworm.utils."""
 
-from deepworm.utils import estimate_cost, estimate_tokens, truncate_text
+import time
+
+from deepworm.utils import RateLimiter, estimate_cost, estimate_tokens, truncate_text
 
 
 def test_estimate_tokens():
@@ -29,3 +31,31 @@ def test_truncate_text_long():
     result = truncate_text(text, 100)
     assert len(result) <= 104  # max_chars + "..."
     assert result.endswith("...")
+
+
+def test_rate_limiter_allows_within_limit():
+    """Should not block when under the limit."""
+    limiter = RateLimiter(max_calls=5, period=1.0)
+    start = time.time()
+    for _ in range(5):
+        limiter.acquire()
+    elapsed = time.time() - start
+    assert elapsed < 0.5  # Should be near-instant
+
+
+def test_rate_limiter_throttles():
+    """Should slow down when over the limit."""
+    limiter = RateLimiter(max_calls=2, period=0.5)
+    limiter.acquire()  # call 1
+    limiter.acquire()  # call 2
+    start = time.time()
+    limiter.acquire()  # call 3 - should wait
+    elapsed = time.time() - start
+    assert elapsed >= 0.1  # Should have waited
+
+
+def test_rate_limiter_context_manager():
+    """Should work as context manager."""
+    limiter = RateLimiter(max_calls=10, period=1.0)
+    with limiter:
+        pass  # Should not raise
