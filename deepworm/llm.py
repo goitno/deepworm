@@ -144,6 +144,10 @@ def get_client(config: Config) -> "LLMClient":
             api_key=api_key,
             base_url=config.base_url or "https://openrouter.ai/api/v1",
             model=config.model,
+            extra_headers={
+                "HTTP-Referer": "https://github.com/bysiber/deepworm",
+                "X-Title": "deepworm",
+            },
         )
     else:
         raise ProviderError(
@@ -225,12 +229,15 @@ class LLMClient:
 
 
 class OpenAICompatibleClient(LLMClient):
-    """Client for OpenAI and Ollama (OpenAI-compatible API)."""
+    """Client for OpenAI, Ollama, and OpenRouter (OpenAI-compatible API)."""
 
-    def __init__(self, api_key: str, base_url: str, model: str):
+    def __init__(self, api_key: str, base_url: str, model: str, extra_headers: dict | None = None):
         super().__init__()
         from openai import OpenAI
-        self.client = OpenAI(api_key=api_key, base_url=base_url)
+        kwargs: dict = {"api_key": api_key, "base_url": base_url}
+        if extra_headers:
+            kwargs["default_headers"] = extra_headers
+        self.client = OpenAI(**kwargs)
         self.model = model
 
     def chat(self, messages: list[dict[str, str]], temperature: float = 0.3) -> str:
