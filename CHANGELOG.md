@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-02-25
+
+### Added
+
+- **Content Compliance** (`compliance.py`): Style guide enforcement and content quality checking. `Severity` enum (error/warning/info/suggestion). `IssueCategory` enum (formatting/style/consistency/content/accessibility/structure). `ComplianceReport` with score (0-100), category/severity grouping, markdown output. `StyleGuide` with configurable rules (sentence/paragraph length, banned/preferred words, require intro/conclusion). 13 built-in checks: sentence length, paragraph length, heading hierarchy, alt text, banned words, preferred words, passive voice, weasel words, clichés, redundant phrases, formatting, consecutive headings, structure. `academic_style_guide()` and `technical_style_guide()` presets.
+- **Internationalization** (`i18n.py`): Multi-language support and translation management. `TranslationEntry` with locale-aware fallback. `TranslationCatalog` with PO and JSON export, coverage statistics. `LanguageDetection` with confidence scoring and script identification. `detect_language()` for 12 languages (en, tr, de, fr, es, pt, it, ja, zh, ko, ar, ru). 8 script types (Latin, CJK, Hiragana, Katakana, Hangul, Arabic, Cyrillic, Devanagari). `extract_translatable()` for markdown. `create_catalog()` and `merge_catalogs()`.
+- **Document Schema Validation** (`schema.py`): Structured data validation and document schema enforcement. `FieldType` enum (string, integer, float, boolean, list, dict, date, url, email, markdown). `SchemaField` with constraint-based validation (min/max length, pattern, choices, value range). `SectionRule` for heading presence and word count constraints. `DocumentSchema` with `validate_data()`, `validate_document()`, `to_json_schema()` export. `report_schema()` and `article_schema()` presets. `create_schema()` dict-based construction helper.
+- **Pipeline Hooks & Middleware** (`hooks.py`): Lifecycle hooks for document processing pipelines. `HookStage` enum with 10 stages (pre/post research, analysis, generation, export, error, complete). `HookContext` with data store and cancellation. `HookRegistry` with register/unregister, enable/disable, priority ordering. `Pipeline` with composable multi-step processing and automatic hook integration. `PipelineResult` with timing and error aggregation. `create_middleware()` before/after wrapper. `@hook` decorator for global registry.
+- **New Exports**: 35 new public API exports. Total public API: 171 exports.
+
 ## [1.0.0] - 2025-02-25
 
 ### Added

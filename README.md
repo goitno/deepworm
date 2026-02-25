@@ -519,7 +519,11 @@ tracker.complete()
 | Revision tracking | LCS diff, rollback, changelog | No |
 | Document statistics | 25+ metrics, reading level, vocabulary | No |
 | Table of contents | Auto-generate, inject, numbered, HTML | No |
-| Lines of code | ~19,000 | ~10,000+ |
+| Content compliance | Style guides, 13 checks, presets | No |
+| Internationalization | 12 languages, PO/JSON export, catalogs | No |
+| Document schemas | Field validation, JSON Schema export | No |
+| Pipeline hooks | 10 lifecycle stages, middleware, pipelines | No |
+| Lines of code | ~22,000 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -594,6 +598,10 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Revision tracking** — LCS-based diff, rollback, changelog, merge histories
 - **Document statistics** — 25+ metrics, Flesch-Kincaid/ARI reading level, vocabulary analysis
 - **Table of contents** — auto-generate from headings, inject with markers, numbered, HTML
+- **Content compliance** — 13 style checks, academic/technical presets, scoring
+- **Internationalization** — detect 12 languages, translation catalogs, PO/JSON export
+- **Document schemas** — field validation, section rules, JSON Schema export
+- **Pipeline hooks** — 10 lifecycle stages, priority ordering, middleware, pipelines
 
 ## License
 
