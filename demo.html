@@ -6,471 +6,233 @@
 <title>deepworm Demo</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
     background: #1a1a2e;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: flex; align-items: center; justify-content: center;
     min-height: 100vh;
-    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
     overflow: hidden;
   }
-
-  .terminal-wrapper {
-    width: 900px;
-    max-width: 95vw;
-    transform: scale(1);
-    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
+  .terminal-wrapper { width: 900px; max-width: 95vw; }
   .terminal {
-    background: #1e1e2e;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow:
-      0 0 0 1px rgba(255,255,255,0.05),
-      0 25px 60px rgba(0,0,0,0.5),
-      0 0 120px rgba(137, 180, 250, 0.08);
+    background: #1e1e2e; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 25px 60px rgba(0,0,0,0.5), 0 0 120px rgba(137,180,250,0.08);
   }
-
   .titlebar {
-    background: #181825;
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    background: #181825; padding: 10px 14px;
+    display: flex; align-items: center; gap: 8px;
     border-bottom: 1px solid rgba(255,255,255,0.05);
   }
-
   .dot { width: 12px; height: 12px; border-radius: 50%; }
   .dot-red { background: #f38ba8; }
   .dot-yellow { background: #f9e2af; }
   .dot-green { background: #a6e3a1; }
-
-  .titlebar-text {
-    flex: 1;
-    text-align: center;
-    color: #6c7086;
-    font-size: 12px;
-    margin-right: 44px;
-  }
-
-  .terminal-body {
-    padding: 16px 20px;
-    height: 520px;
-    overflow-y: hidden;
-    position: relative;
-  }
-
-  .lines-container {
-    transition: transform 0.15s ease-out;
-  }
-
+  .titlebar-text { flex:1; text-align:center; color:#6c7086; font-size:11px; margin-right:44px; }
+  .terminal-body { padding: 12px 16px; height: 440px; overflow-y: hidden; position: relative; }
+  .lines-container { transition: transform 0.12s ease-out; }
   .line {
-    min-height: 22px;
-    line-height: 22px;
-    font-size: 13.5px;
-    color: #cdd6f4;
-    white-space: pre;
-    opacity: 0;
-    transform: translateY(4px);
-    transition: opacity 0.2s ease, transform 0.2s ease;
+    min-height: 20px; line-height: 20px; font-size: 12.5px;
+    color: #cdd6f4; white-space: pre;
+    opacity: 0; transform: translateY(3px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
   }
-
-  .line.visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
+  .line.visible { opacity: 1; transform: translateY(0); }
   .line.typing .cursor {
-    display: inline-block;
-    width: 8px;
-    height: 16px;
-    background: #89b4fa;
-    animation: blink 0.8s step-end infinite;
-    vertical-align: text-bottom;
-    margin-left: 1px;
+    display: inline-block; width: 7px; height: 14px;
+    background: #89b4fa; animation: blink 0.8s step-end infinite;
+    vertical-align: text-bottom; margin-left: 1px;
   }
-
-  @keyframes blink {
-    50% { opacity: 0; }
-  }
-
-  /* Colors - Catppuccin Mocha */
-  .c-green { color: #a6e3a1; }
-  .c-blue { color: #89b4fa; }
-  .c-cyan { color: #94e2d5; }
-  .c-yellow { color: #f9e2af; }
-  .c-red { color: #f38ba8; }
-  .c-pink { color: #f5c2e7; }
-  .c-dim { color: #6c7086; }
-  .c-bold { font-weight: 700; }
-  .c-white { color: #cdd6f4; }
-  .c-mauve { color: #cba6f7; }
-  .c-peach { color: #fab387; }
-  .c-teal { color: #94e2d5; }
-
-  /* Prompt */
+  @keyframes blink { 50% { opacity: 0; } }
+  .c-green { color: #a6e3a1; } .c-blue { color: #89b4fa; }
+  .c-cyan { color: #94e2d5; } .c-yellow { color: #f9e2af; }
+  .c-red { color: #f38ba8; } .c-pink { color: #f5c2e7; }
+  .c-dim { color: #6c7086; } .c-bold { font-weight: 700; }
+  .c-white { color: #cdd6f4; } .c-mauve { color: #cba6f7; }
+  .c-peach { color: #fab387; } .c-teal { color: #94e2d5; }
   .prompt { color: #89b4fa; font-weight: 700; }
-
-  /* Menu styling */
-  .menu-item { color: #6c7086; }
-  .menu-item.active { color: #89b4fa; font-weight: 700; }
-
-  /* Progress bar */
-  .progress-bar {
-    display: inline-block;
-    color: #a6e3a1;
-  }
-
-  /* Intro overlay */
   .intro-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: #1a1a2e;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    transition: opacity 0.8s ease;
+    position: fixed; top:0; left:0; right:0; bottom:0;
+    background: #1a1a2e; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100; transition: opacity 0.6s ease;
   }
-
-  .intro-overlay.hidden {
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  .intro-title {
-    font-size: 48px;
-    font-weight: 700;
-    color: #cdd6f4;
-    margin-bottom: 8px;
-  }
-
-  .intro-subtitle {
-    font-size: 16px;
-    color: #6c7086;
-    margin-bottom: 40px;
-  }
-
-  .intro-emoji {
-    font-size: 64px;
-    margin-bottom: 16px;
-    animation: bounce 1.5s ease-in-out infinite;
-  }
-
-  @keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-
-  /* Zoom effect for specific sections */
-  .terminal-wrapper.zoom-in {
-    transform: scale(1.08);
-  }
-
-  /* Stats highlight */
-  .stats-box {
-    display: inline;
-  }
+  .intro-overlay.hidden { opacity: 0; pointer-events: none; }
+  .intro-title { font-size: 42px; font-weight: 700; color: #cdd6f4; margin-bottom: 6px; }
+  .intro-subtitle { font-size: 14px; color: #6c7086; }
+  .intro-emoji { font-size: 56px; margin-bottom: 12px; animation: bounce 1.5s ease-in-out infinite; }
+  @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 </style>
 </head>
 <body>
-
-<!-- Intro Screen -->
 <div class="intro-overlay" id="intro">
   <div class="intro-emoji">🐁</div>
   <div class="intro-title">deepworm</div>
   <div class="intro-subtitle">AI-powered deep research from your terminal</div>
 </div>
-
-<!-- Terminal -->
 <div class="terminal-wrapper" id="termWrapper">
   <div class="terminal">
     <div class="titlebar">
       <div class="dot dot-red"></div>
       <div class="dot dot-yellow"></div>
       <div class="dot dot-green"></div>
-      <div class="titlebar-text">deepworm — zsh — 120×40</div>
+      <div class="titlebar-text">deepworm — zsh</div>
     </div>
     <div class="terminal-body" id="termBody">
-      <div class="lines-container" id="linesContainer">
-      </div>
+      <div class="lines-container" id="linesContainer"></div>
     </div>
   </div>
 </div>
-
 <script>
 const container = document.getElementById('linesContainer');
-const termBody = document.getElementById('termBody');
-const termWrapper = document.getElementById('termWrapper');
-const intro = document.getElementById('intro');
+const LINE_HEIGHT = 20;
+const VISIBLE_LINES = Math.floor(440 / LINE_HEIGHT);
 
-let currentScroll = 0;
-const LINE_HEIGHT = 22;
-const VISIBLE_LINES = Math.floor(520 / LINE_HEIGHT);
-
-// Helper: create a line element
-function makeLine(html = '', cls = '') {
+function makeLine(html='') {
   const div = document.createElement('div');
-  div.className = 'line' + (cls ? ' ' + cls : '');
+  div.className = 'line';
   div.innerHTML = html;
   container.appendChild(div);
-  // Trigger reflow then make visible
-  requestAnimationFrame(() => {
-    div.classList.add('visible');
-  });
-  autoScroll();
+  requestAnimationFrame(() => div.classList.add('visible'));
+  const n = container.children.length;
+  if (n > VISIBLE_LINES)
+    container.style.transform = `translateY(-${(n - VISIBLE_LINES) * LINE_HEIGHT}px)`;
   return div;
 }
+const wait = ms => new Promise(r => setTimeout(r, ms));
 
-function autoScroll() {
-  const lines = container.children;
-  const totalLines = lines.length;
-  if (totalLines > VISIBLE_LINES) {
-    currentScroll = (totalLines - VISIBLE_LINES) * LINE_HEIGHT;
-    container.style.transform = `translateY(-${currentScroll}px)`;
-  }
-}
-
-// Helper: delay
-function wait(ms) {
-  return new Promise(r => setTimeout(r, ms));
-}
-
-// Helper: type text character by character
-async function typeText(lineEl, text, speed = 35) {
-  lineEl.classList.add('typing');
-  let current = lineEl.getAttribute('data-prefix') || '';
-  const cursor = '<span class="cursor"></span>';
-
+async function typeText(el, text, speed=20) {
+  el.classList.add('typing');
+  let cur = el.getAttribute('data-prefix') || '';
   for (let i = 0; i < text.length; i++) {
-    current += text[i];
-    lineEl.innerHTML = current + cursor;
-    await wait(speed + Math.random() * 15);
+    cur += text[i];
+    el.innerHTML = cur + '<span class="cursor"></span>';
+    await wait(speed + Math.random() * 8);
   }
-  lineEl.classList.remove('typing');
-  lineEl.innerHTML = current;
+  el.classList.remove('typing');
+  el.innerHTML = cur;
 }
-
-// Helper: type a prompt line
-async function typePrompt(text, speed = 35) {
-  const line = makeLine('');
-  line.setAttribute('data-prefix', '<span class="prompt">❯ </span>');
-  line.innerHTML = '<span class="prompt">❯ </span>';
-  await wait(300);
-  await typeText(line, text, speed);
-  return line;
+async function typePrompt(text, speed=20) {
+  const l = makeLine('');
+  l.setAttribute('data-prefix', '<span class="prompt">❯ </span>');
+  l.innerHTML = '<span class="prompt">❯ </span>';
+  await wait(150);
+  await typeText(l, text, speed);
 }
-
-// Helper: add output line with delay
-async function outputLine(html, delay = 80) {
-  makeLine(html);
-  await wait(delay);
-}
-
-// ─── Scenario ───
+async function out(html, delay=40) { makeLine(html); await wait(delay); }
 
 async function runDemo() {
-  // Intro
-  await wait(2000);
-  intro.classList.add('hidden');
-  await wait(800);
-
-  // ──── SCENE 1: pip install ────
-  await typePrompt('pip install deepworm', 30);
-  await wait(200);
-  await outputLine('<span class="c-dim">Collecting deepworm</span>', 150);
-  await outputLine('<span class="c-dim">  Downloading deepworm-1.5.0-py3-none-any.whl (48 kB)</span>', 200);
-  await outputLine('<span class="c-dim">Installing collected packages: deepworm</span>', 200);
-  await outputLine('<span class="c-green">Successfully installed deepworm-1.5.0</span>', 400);
-  await wait(600);
-
-  // ──── SCENE 2: Set API key ────
-  await typePrompt('export GOOGLE_API_KEY="AIza..."', 28);
-  await wait(800);
-
-  // ──── SCENE 3: Interactive Mode ────
-  await typePrompt('deepworm interactive', 30);
-  await wait(400);
-
-  // Header
-  await outputLine('', 50);
-  await outputLine('<span class="c-blue c-bold">deepworm 🐁 v1.5.0</span>  │  <span class="c-cyan">google/gemini-2.5-flash-lite</span>  │  <span class="c-dim">depth:1  breadth:1</span>', 100);
-  await outputLine('<span class="c-dim">────────────────────────────────────────────────────────────────</span>', 100);
-
-  // TUI Menu
-  await outputLine('  <span class="c-blue c-bold">↑ Research</span>        <span class="c-dim">/keys    API keys</span>', 60);
-  await outputLine('  <span class="c-dim">  /models          /set     Settings</span>', 60);
-  await outputLine('  <span class="c-dim">  /last            /graph   Knowledge graph</span>', 60);
-  await outputLine('  <span class="c-dim">  /polish          /help    Help</span>', 60);
-  await outputLine('  <span class="c-dim">  /exit            Ctrl+C   Quit</span>', 60);
-  await outputLine('', 50);
-
-  // User types query
-  const queryLine = makeLine('');
-  queryLine.setAttribute('data-prefix', '<span class="c-mauve c-bold">⟫ </span>');
-  queryLine.innerHTML = '<span class="c-mauve c-bold">⟫ </span>';
+  await wait(1500);
+  document.getElementById('intro').classList.add('hidden');
   await wait(500);
-  await typeText(queryLine, 'quantum computing breakthroughs 2025 --polish --graph stats', 28);
-  await wait(300);
 
-  // Zoom in for the action
-  termWrapper.classList.add('zoom-in');
+  // Install
+  await typePrompt('pip install deepworm', 18);
+  await wait(100);
+  await out('<span class="c-green">Successfully installed deepworm-1.5.0</span>', 400);
+
+  // Key
+  await typePrompt('export GOOGLE_API_KEY="AIza..."', 18);
   await wait(400);
 
-  // ──── SCENE 4: Research in Progress ────
-  await outputLine('', 50);
+  // Interactive
+  await typePrompt('deepworm interactive', 18);
+  await wait(200);
+  await out('');
+  await out('<span class="c-blue c-bold">deepworm 🐁 v1.5.0</span>  │  <span class="c-cyan">gemini-2.5-flash-lite</span>  │  <span class="c-dim">depth:1 breadth:1</span>', 60);
+  await out('<span class="c-dim">──────────────────────────────────────────────────────</span>', 60);
+  await out('  <span class="c-blue c-bold">↑ Research</span>      <span class="c-dim">/keys  /models  /set  /graph  /polish</span>', 40);
+  await out('', 30);
 
-  // Search queries
-  await outputLine('<span class="c-yellow">🔍 Generating search queries...</span>', 600);
-  await outputLine('<span class="c-yellow">🔍</span> <span class="c-dim">[1/3]</span> quantum computing breakthroughs 2025', 300);
-  await outputLine('<span class="c-yellow">🔍</span> <span class="c-dim">[2/3]</span> quantum error correction advances latest', 300);
-  await outputLine('<span class="c-yellow">🔍</span> <span class="c-dim">[3/3]</span> quantum computing practical applications 2025', 400);
-  await outputLine('', 50);
+  // Query
+  const ql = makeLine('');
+  ql.setAttribute('data-prefix', '<span class="c-mauve c-bold">⟫ </span>');
+  ql.innerHTML = '<span class="c-mauve c-bold">⟫ </span>';
+  await wait(200);
+  await typeText(ql, 'quantum computing 2025 --polish --graph stats', 18);
+  await wait(200);
+  await out('');
 
-  // Pages fetched
+  // Searches
+  await out('<span class="c-yellow">🔍</span> Generating search queries...', 300);
+  await out('<span class="c-yellow">🔍</span> <span class="c-dim">[1/3]</span> quantum computing breakthroughs 2025', 150);
+  await out('<span class="c-yellow">🔍</span> <span class="c-dim">[2/3]</span> quantum error correction advances', 150);
+  await out('<span class="c-yellow">🔍</span> <span class="c-dim">[3/3]</span> quantum practical applications 2025', 200);
+  await out('');
+
+  // Pages
   const pages = [
-    ['nature.com/articles/s41586-025-quantum', '15,230'],
-    ['arxiv.org/abs/2501.08342', '12,870'],
-    ['technologyreview.com/2025/quantum-leap', '9,450'],
-    ['research.ibm.com/quantum-roadmap', '11,200'],
-    ['blog.google/quantum-willow', '8,930'],
-    ['microsoft.com/azure-quantum-2025', '7,650'],
-    ['science.org/doi/quantum-error', '6,890'],
-    ['wired.com/story/quantum-advantage-2025', '5,430'],
+    ['nature.com/quantum-2025','15,230'],['arxiv.org/abs/2501.08342','12,870'],
+    ['technologyreview.com/quantum','9,450'],['research.ibm.com/quantum','11,200'],
+    ['blog.google/quantum-willow','8,930'],['microsoft.com/azure-quantum','7,650'],
+    ['science.org/quantum-error','6,890'],['wired.com/quantum-2025','5,430'],
   ];
-
-  for (let i = 0; i < pages.length; i++) {
-    await outputLine(`<span class="c-cyan">📄</span> <span class="c-dim">[${i+1}]</span> <span class="c-teal">${pages[i][0]}</span> <span class="c-dim">(${pages[i][1]} chars)</span>`, 180);
-  }
-  await outputLine('', 50);
+  for (let i = 0; i < pages.length; i++)
+    await out(`<span class="c-cyan">📄</span> <span class="c-dim">[${i+1}]</span> <span class="c-teal">${pages[i][0]}</span> <span class="c-dim">(${pages[i][1]} chars)</span>`, 80);
+  await out('');
 
   // Analysis
   const findings = [
-    ['nature.com', 'Google\'s Willow chip achieves below-threshold error correction...'],
-    ['arxiv.org', 'Topological qubits demonstrate 99.9% gate fidelity in latest...'],
-    ['technologyreview.com', 'IBM\'s 1000+ qubit Condor processor marks commercial milestone...'],
-    ['research.ibm.com', 'Quantum advantage demonstrated for drug discovery simulations...'],
-    ['blog.google', 'Random circuit sampling benchmark solved in 5 min vs 10^25 years...'],
-    ['microsoft.com', 'Azure Quantum integrates hybrid classical-quantum workflows...'],
-    ['science.org', 'Logical qubit error rates drop below physical error threshold...'],
-    ['wired.com', 'First practical quantum advantage applications in cryptography...'],
+    ['nature.com','Google Willow achieves below-threshold error correction...'],
+    ['arxiv.org','Topological qubits show 99.9% gate fidelity...'],
+    ['technologyreview.com','IBM 1000+ qubit Condor marks commercial milestone...'],
+    ['research.ibm.com','Quantum advantage for drug discovery simulations...'],
+    ['blog.google','Random circuit sampling solved in 5 min vs 10²⁵ years...'],
   ];
+  for (const f of findings)
+    await out(`<span class="c-peach">⏳</span> ${f[0]}  <span class="c-green">✓</span> <span class="c-dim">"${f[1]}"</span>`, 120);
+  await out('<span class="c-dim">  ...and 3 more sources</span>', 80);
+  await out('');
+  await out('<span class="c-pink">✍</span> <span class="c-bold">Synthesizing report from 8 sources...</span>', 500);
+  await out('');
 
-  for (let i = 0; i < findings.length; i++) {
-    await outputLine(`<span class="c-peach">⏳</span> Analyzing <span class="c-dim">[${i+1}]</span> ${findings[i][0]}...`, 100);
-    await outputLine(`  <span class="c-green">✓</span> <span class="c-dim">"${findings[i][1]}"</span>`, 200);
-  }
+  // Report
+  await out('<span class="c-blue c-bold"># Quantum Computing Breakthroughs in 2025</span>', 60);
+  await out('');
+  await out('<span class="c-blue c-bold">## Overview</span>', 40);
+  await out('2025 marked a pivotal turning point in quantum computing', 20);
+  await out('with breakthroughs in error correction and qubit fidelity.', 20);
+  await out('');
+  await out('<span class="c-bold">### 1. Below-Threshold Error Correction</span>', 40);
+  await out('Google Willow chip: error rates decrease exponentially [1][2].', 20);
+  await out('');
+  await out('<span class="c-bold">### 2. 1000+ Qubit Processors</span>', 40);
+  await out('IBM Condor surpassed 1,121 qubits [3].', 20);
+  await out('');
+  await out('<span class="c-bold">### 3. Practical Quantum Advantage</span>', 40);
+  await out('First quantum advantage in drug discovery simulations [4][5].', 20);
+  await out('');
 
-  await outputLine('', 50);
-  await outputLine('<span class="c-pink">✍</span>  <span class="c-bold">Synthesizing report from 8 sources...</span>', 800);
-  await outputLine('', 50);
+  // Done
+  await out('<span class="c-dim">─────────────────────────────────────────────────</span>', 40);
+  await out('<span class="c-green c-bold">✅ Done</span> · <span class="c-cyan">8 sources</span> · <span class="c-yellow">38.2s</span> · <span class="c-peach">15,840 tokens</span>', 200);
+  await out('<span class="c-dim">📄 Auto-saved: ~/.deepworm/reports/quantum_computing_2025.md</span>', 150);
+  await out('');
 
-  // ──── SCENE 5: Report Output ────
-  await outputLine('<span class="c-blue c-bold"># Quantum Computing Breakthroughs in 2025</span>', 150);
-  await outputLine('', 30);
-  await outputLine('<span class="c-blue c-bold">## Overview</span>', 100);
-  await outputLine('The year 2025 has marked a pivotal turning point in quantum', 40);
-  await outputLine('computing, with major breakthroughs in error correction, qubit', 40);
-  await outputLine('fidelity, and practical applications across multiple domains.', 40);
-  await outputLine('', 30);
-  await outputLine('<span class="c-blue c-bold">## Key Breakthroughs</span>', 100);
-  await outputLine('', 30);
-  await outputLine('<span class="c-bold">### 1. Below-Threshold Error Correction</span>', 80);
-  await outputLine('Google\'s Willow quantum chip achieved a milestone: quantum error', 35);
-  await outputLine('correction rates that decrease exponentially as more qubits are', 35);
-  await outputLine('added, crossing below the critical threshold [1][2].', 35);
-  await outputLine('', 30);
-  await outputLine('<span class="c-bold">### 2. 1000+ Qubit Processors</span>', 80);
-  await outputLine('IBM\'s Condor processor surpassed 1,121 qubits, demonstrating', 35);
-  await outputLine('that large-scale quantum systems are now manufacturable [3].', 35);
-  await outputLine('', 30);
-  await outputLine('<span class="c-bold">### 3. Practical Quantum Advantage</span>', 80);
-  await outputLine('For the first time, quantum computers outperformed classical', 35);
-  await outputLine('systems in drug discovery molecular simulations [4][5].', 35);
-  await outputLine('', 30);
+  // Polish
+  await out('<span class="c-dim">━━━━━━━━━━━━━ </span><span class="c-blue c-bold">Polish Pipeline</span><span class="c-dim"> ━━━━━━━━━━━━━</span>', 50);
+  await out('  <span class="c-bold">1.</span> Readability  <span class="c-cyan">Grade 12</span> <span class="c-dim">(college)</span>    <span class="c-bold">2.</span> Compliance  <span class="c-green">✓ 5/5</span>    <span class="c-bold">3.</span> Quality  <span class="c-green c-bold">A</span> <span class="c-dim">(91%)</span>', 200);
+  await out('     <span class="c-dim">Structure</span> <span class="c-green">████████████████████</span> <span class="c-dim">95%</span>   <span class="c-dim">Depth</span> <span class="c-green">██████████████████░░</span> <span class="c-dim">88%</span>', 80);
+  await out('     <span class="c-dim">Sources</span>   <span class="c-green">███████████████████░</span> <span class="c-dim">92%</span>   <span class="c-dim">Read.</span> <span class="c-green">██████████████████░░</span> <span class="c-dim">90%</span>', 80);
+  await out('');
 
-  // Sources
-  await outputLine('<span class="c-blue c-bold">## Sources</span>', 100);
-  await outputLine('<span class="c-dim">[1] nature.com/articles/s41586-025-quantum</span>', 30);
-  await outputLine('<span class="c-dim">[2] arxiv.org/abs/2501.08342</span>', 30);
-  await outputLine('<span class="c-dim">[3] research.ibm.com/quantum-roadmap</span>', 30);
-  await outputLine('<span class="c-dim">[4] blog.google/quantum-willow</span>', 30);
-  await outputLine('<span class="c-dim">[5] wired.com/story/quantum-advantage-2025</span>', 30);
-  await outputLine('', 50);
+  // Graph
+  await out('<span class="c-dim">━━━━━━━━━━━━━ </span><span class="c-blue c-bold">Knowledge Graph</span><span class="c-dim"> ━━━━━━━━━━━━━</span>', 50);
+  await out('  <span class="c-bold">Nodes</span> 18   <span class="c-bold">Edges</span> 29   <span class="c-bold">Density</span> 0.189', 80);
+  await out('  <span class="c-cyan">Quantum Computing </span> <span class="c-dim">concept</span>  <span class="c-green">████████</span> 8    <span class="c-cyan">Error Correction</span> <span class="c-dim">concept</span>  <span class="c-green">██████</span> 6', 80);
+  await out('  <span class="c-cyan">Google Willow     </span> <span class="c-dim">entity </span>  <span class="c-green">█████</span> 5    <span class="c-cyan">IBM Condor      </span> <span class="c-dim">entity </span>  <span class="c-green">████</span> 4', 80);
+  await out('');
 
-  // Done line
-  await outputLine('<span class="c-dim">───────────────────────────────────────────────────────</span>', 80);
-  await outputLine('<span class="c-green c-bold">✅ Done</span> · <span class="c-cyan">8 sources</span> · <span class="c-yellow">38.2s</span> · <span class="c-peach">15,840 tokens</span>', 300);
-  await outputLine('<span class="c-dim">📄 Auto-saved: ~/.deepworm/reports/quantum_computing_2025_20250225.md</span>', 200);
-  await outputLine('', 100);
-
-  // ──── SCENE 6: Polish Pipeline ────
-  await outputLine('<span class="c-dim">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>', 80);
-  await outputLine('<span class="c-blue c-bold">                    Polish Pipeline</span>', 100);
-  await outputLine('<span class="c-dim">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>', 100);
-  await outputLine('', 50);
-  await outputLine('  <span class="c-bold">1.</span> Readability    <span class="c-cyan">Grade 12</span> <span class="c-dim">(college level)</span>', 300);
-  await outputLine('  <span class="c-bold">2.</span> Compliance     <span class="c-green">✓ 5/5 checks passed</span>', 300);
-  await outputLine('  <span class="c-bold">3.</span> Quality        <span class="c-green c-bold">A</span> <span class="c-dim">(91%)</span>', 300);
-  await outputLine('', 50);
-
-  // Quality breakdown
-  await outputLine('     <span class="c-dim">Structure</span>    <span class="c-green">████████████████████</span> <span class="c-dim">95%</span>', 100);
-  await outputLine('     <span class="c-dim">Depth</span>        <span class="c-green">██████████████████░░</span> <span class="c-dim">88%</span>', 100);
-  await outputLine('     <span class="c-dim">Sources</span>      <span class="c-green">███████████████████░</span> <span class="c-dim">92%</span>', 100);
-  await outputLine('     <span class="c-dim">Readability</span>  <span class="c-green">██████████████████░░</span> <span class="c-dim">90%</span>', 100);
-  await outputLine('     <span class="c-dim">Complete</span>     <span class="c-green">██████████████████░░</span> <span class="c-dim">89%</span>', 100);
-  await outputLine('', 100);
-
-  // ──── SCENE 7: Knowledge Graph ────
-  await outputLine('<span class="c-dim">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>', 80);
-  await outputLine('<span class="c-blue c-bold">                   Knowledge Graph</span>', 100);
-  await outputLine('<span class="c-dim">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>', 100);
-  await outputLine('', 50);
-  await outputLine('  <span class="c-bold">Nodes</span>        <span class="c-white">18</span>', 80);
-  await outputLine('  <span class="c-bold">Edges</span>        <span class="c-white">29</span>', 80);
-  await outputLine('  <span class="c-bold">Components</span>   <span class="c-white">2</span>', 80);
-  await outputLine('  <span class="c-bold">Density</span>      <span class="c-white">0.189</span>', 80);
-  await outputLine('  <span class="c-bold">Avg Degree</span>   <span class="c-white">3.2</span>', 80);
-  await outputLine('', 50);
-
-  // Top connected nodes
-  await outputLine('  <span class="c-bold">Top connected nodes:</span>', 100);
-  await outputLine('  <span class="c-cyan">Quantum Computing    </span> <span class="c-dim">concept</span>   <span class="c-green">8 ████████</span>', 100);
-  await outputLine('  <span class="c-cyan">Error Correction     </span> <span class="c-dim">concept</span>   <span class="c-green">6 ██████</span>', 100);
-  await outputLine('  <span class="c-cyan">Google Willow        </span> <span class="c-dim">entity </span>   <span class="c-green">5 █████</span>', 100);
-  await outputLine('  <span class="c-cyan">IBM Condor           </span> <span class="c-dim">entity </span>   <span class="c-green">4 ████</span>', 100);
-  await outputLine('  <span class="c-cyan">Qubit Fidelity       </span> <span class="c-dim">concept</span>   <span class="c-green">4 ████</span>', 100);
-  await outputLine('  <span class="c-cyan">Drug Discovery       </span> <span class="c-dim">topic  </span>   <span class="c-green">3 ███</span>', 100);
-  await outputLine('', 100);
-
-  // Zoom back out
-  termWrapper.classList.remove('zoom-in');
-  await wait(300);
-
-  // ──── SCENE 8: End ────
-  await outputLine('', 50);
-  const endLine = makeLine('');
-  endLine.setAttribute('data-prefix', '<span class="c-mauve c-bold">⟫ </span>');
-  endLine.innerHTML = '<span class="c-mauve c-bold">⟫ </span><span class="cursor"></span>';
-  endLine.classList.add('typing');
-
-  await wait(2000);
-
-  // Fade in tagline
-  await outputLine('', 50);
-  await outputLine('<span class="c-dim">  pip install deepworm  ·  github.com/bysiber/deepworm</span>', 500);
-
-  await wait(3000);
+  // End
+  const el = makeLine('');
+  el.setAttribute('data-prefix', '<span class="c-mauve c-bold">⟫ </span>');
+  el.innerHTML = '<span class="c-mauve c-bold">⟫ </span><span class="cursor"></span>';
+  el.classList.add('typing');
+  await wait(1500);
+  await out('');
+  await out('<span class="c-dim">  pip install deepworm  ·  github.com/bysiber/deepworm</span>');
+  await wait(2500);
 }
-
-// Start
 runDemo();
 </script>
 </body>
