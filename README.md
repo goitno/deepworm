@@ -502,7 +502,12 @@ tracker.complete()
 | Web UI | Built-in (`--serve`) | Yes |
 | Search providers | 3 (DDG, Brave, SearXNG) | 5+ |
 | Dependencies | 3 packages | 30+ packages |
-| Lines of code | ~9,500 | ~10,000+ |
+| Keyword extraction | TF-based keywords + phrase detection | No |
+| Footnote management | Auto-convert citations to footnotes | No |
+| Multi-format export | MD/HTML/JSON/Text/Notion/CSV hub | Limited |
+| Summarization | 4 styles (executive, abstract, bullets, TLDR) | No |
+| Readability analysis | 4 formulas (Flesch, Fog, Coleman-Liau) | No |
+| Lines of code | ~11,100 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -560,6 +565,11 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Env var config** — `DEEPWORM_*` environment variable overrides
 - **Circuit breaker** — prevent cascading failures with auto-recovery
 - **Link checking** — extract and validate links from markdown reports
+- **Keyword extraction** — TF-based keywords and keyphrase detection with tagging
+- **Footnote management** — auto-convert citations and links to numbered footnotes
+- **Multi-format export** — unified export to MD, HTML, JSON, text, Notion, CSV
+- **Summarization** — 4 styles: executive, abstract, bullets, TLDR
+- **Readability analysis** — Flesch, Flesch-Kincaid, Gunning Fog, Coleman-Liau
 
 ## License
 

@@ -2,7 +2,7 @@
 
 import logging
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 
 from .async_api import AsyncResearcher, async_research
 from .chain import research_chain

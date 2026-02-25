@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-02-25
+
+### Added
+
+- **Keyword Extraction** (`keywords.py`): TF-based keyword and keyphrase extraction from reports. Bigram/trigram phrase detection, stop word filtering, deduplication of subsumed terms, `extract_tags()` for short tag generation. `KeywordResult` with markdown table output.
+- **Footnote Management** (`footnotes.py`): Convert inline citations and markdown links to numbered footnotes. Three render styles (markdown, endnotes, inline). `renumber_footnotes()` fixes gaps, `strip_footnotes()` removes all markers, `merge_footnotes()` combines multiple results.
+- **Unified Export Hub** (`export.py`): Single interface for multi-format report export — Markdown (with ToC), HTML (responsive CSS), JSON (structured sections), plain text (word-wrapped), Notion (block API), CSV. `batch_export()` for exporting to multiple formats at once.
+- **Summary & Abstract Generator** (`summary.py`): 4 summarization styles — executive, abstract, bullets, TLDR. `extract_key_findings()` with importance scoring (8 signal patterns). `extract_topics()` from report headings.
+- **Readability Analysis** (`readability.py`): 4 readability formulas — Flesch Reading Ease, Flesch-Kincaid Grade, Gunning Fog, Coleman-Liau. Vocabulary richness, reading level classification, markdown stripping.
+- **Progress Tracking** (`progress.py`): Real-time research progress with 10 stages, callback support, ETA estimation, progress bar formatting.
+- **New Exports**: 25 new public API exports including `Keyword`, `KeywordResult`, `extract_keywords`, `extract_tags`, `FootnoteResult`, `add_footnotes`, `merge_footnotes`, `renumber_footnotes`, `strip_footnotes`, `ExportFormat`, `ExportOptions`, `ExportResult`, `export_report`, `batch_export`, `Summary`, `summarize`, `extract_key_findings`, `extract_topics`, `ReadabilityResult`, `analyze_readability`, `ProgressTracker`, `ProgressSnapshot`, `ResearchStage`. Total public API: 65 exports.
+
 ## [0.6.0] - 2025-02-25
 
 ### Added
