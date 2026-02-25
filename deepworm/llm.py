@@ -321,32 +321,33 @@ class AnthropicClient(LLMClient):
 
 
 class GoogleClient(LLMClient):
-    """Client for Google Gemini."""
+    """Client for Google Gemini (new google-genai SDK)."""
 
     def __init__(self, api_key: str, model: str):
         super().__init__()
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        self.genai = genai
+        from google import genai
+        self._client = genai.Client(api_key=api_key)
         self.model_name = model
         self.model = model  # for base class access
 
     def chat(self, messages: list[dict[str, str]], temperature: float = 0.3) -> str:
-        model = self.genai.GenerativeModel(self.model_name)
+        from google.genai import types
 
-        # Convert messages to Gemini format
+        # Convert messages to prompt text
         parts = []
         for m in messages:
             parts.append(m["content"])
-
         prompt_text = "\n\n".join(parts)
-        resp = model.generate_content(
-            prompt_text,
-            generation_config={"temperature": temperature},
+
+        resp = self._client.models.generate_content(
+            model=self.model_name,
+            contents=prompt_text,
+            config=types.GenerateContentConfig(temperature=temperature),
         )
-        result_text = resp.text
-        # Track token usage — Gemini API may provide usage_metadata
-        if hasattr(resp, 'usage_metadata') and resp.usage_metadata:
+        result_text = resp.text or ""
+
+        # Track token usage
+        if resp.usage_metadata:
             um = resp.usage_metadata
             self._record_usage(
                 prompt_tokens=getattr(um, 'prompt_token_count', 0) or 0,
@@ -354,7 +355,6 @@ class GoogleClient(LLMClient):
                 model=self.model_name,
             )
         else:
-            # Estimate tokens
             self._record_usage(
                 prompt_tokens=_estimate_tokens(prompt_text),
                 completion_tokens=_estimate_tokens(result_text),

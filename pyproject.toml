@@ -35,11 +35,11 @@ dependencies = [
 
 [project.optional-dependencies]
 anthropic = ["anthropic>=0.20.0"]
-google = ["google-generativeai>=0.5.0"]
+google = ["google-genai>=1.0.0"]
 yaml = ["pyyaml>=6.0"]
 all = [
     "anthropic>=0.20.0",
-    "google-generativeai>=0.5.0",
+    "google-genai>=1.0.0",
     "pyyaml>=6.0",
 ]
 
