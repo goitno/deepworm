@@ -1261,6 +1261,7 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
     _MENU = [
         ("help", "Show all commands"),
         ("models", "List & switch models"),
+        ("keys", "Add/manage API keys"),
         ("config", "Show current config"),
         ("set", "Change a setting"),
         ("compare", "Compare topics"),
@@ -1312,6 +1313,8 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
                 _show_help()
             elif label == "models":
                 _show_models_interactive(config)
+            elif label == "keys":
+                _manage_keys(config)
             elif label == "config":
                 _show_config(config)
             elif label == "set":
@@ -1389,6 +1392,10 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
 
         if cmd_lower in ("/models",):
             _show_models_interactive(config)
+            continue
+
+        if cmd_lower in ("/keys",):
+            _manage_keys(config)
             continue
 
         if cmd_lower.startswith("/set "):
@@ -1569,6 +1576,7 @@ def _show_help() -> None:
     cmds.add_column(style="dim")
     cmds.add_row("/help", "Show this help")
     cmds.add_row("/models", "List & switch models interactively")
+    cmds.add_row("/keys", "Add/manage API keys (saved to ~/.deepworm_keys)")
     cmds.add_row("/set <key> <value>", "Change config (provider, model, depth, breadth, max_sources)")
     cmds.add_row("/config", "Show current configuration")
     cmds.add_row("/compare t1, t2, t3", "Compare multiple topics")
@@ -1657,6 +1665,69 @@ def _show_history_interactive() -> None:
 def _show_models(config: "Config") -> None:
     """Show available models for current provider (non-interactive fallback)."""
     _show_models_interactive(config)
+
+
+def _manage_keys(config: "Config") -> None:
+    """Interactive API key manager — add/view/update keys."""
+    from .config import PROVIDER_KEY_ENVS, get_saved_keys_status, save_api_key
+
+    console.print()
+    status = get_saved_keys_status()
+
+    tbl = Table(title="API Keys", header_style="bold", padding=(0, 2))
+    tbl.add_column("Provider", style="cyan")
+    tbl.add_column("Status")
+    tbl.add_column("Env Variable", style="dim")
+
+    for provider, env_var in PROVIDER_KEY_ENVS.items():
+        has_key = status.get(provider, False)
+        value = os.getenv(env_var, "")
+        if has_key and value:
+            masked = value[:4] + "•" * 8 + value[-4:] if len(value) > 10 else "••••"
+            st = f"[green]✓ {masked}[/green]"
+        else:
+            st = "[dim]not set[/dim]"
+        tbl.add_row(provider, st, env_var)
+
+    console.print(tbl)
+    console.print()
+
+    # Build items for arrow selector
+    items = [(p, "update key" if status.get(p) else "add key") for p in PROVIDER_KEY_ENVS]
+    items.append(("done", "back to prompt"))
+    console.print("  [dim]↑↓ to select provider, Enter to set key, Esc to cancel[/dim]\n")
+
+    idx = _arrow_select(items)
+    if idx is None or idx == len(items) - 1:
+        return
+
+    provider = items[idx][0]
+    env_var = PROVIDER_KEY_ENVS[provider]
+    console.print(f"\n  [cyan]Enter API key for {provider}[/cyan]")
+    console.print(f"  [dim](saved to ~/.deepworm_keys, chmod 600)[/dim]")
+    try:
+        api_key = input("  Key: ").strip()
+    except (KeyboardInterrupt, EOFError):
+        console.print()
+        return
+
+    if not api_key:
+        console.print("  [yellow]Cancelled.[/yellow]")
+        return
+
+    save_api_key(provider, api_key)
+
+    # Update current config if matching provider
+    if provider == config.provider or not config.api_key or config.api_key == "ollama":
+        config.provider = provider
+        config.api_key = api_key
+        if provider == "openrouter":
+            config.base_url = "https://openrouter.ai/api/v1"
+        config.model = config._default_model(provider)
+
+    console.print(f"  [green]✓ {provider} key saved and activated![/green]")
+    console.print(f"  [dim]Provider: {config.provider}, Model: {config.model}[/dim]")
+    console.print()
 
 
 def _show_models_interactive(config: "Config") -> None:

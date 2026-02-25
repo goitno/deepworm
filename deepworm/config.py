@@ -78,7 +78,10 @@ class Config:
         return cls(**env_config)
 
     def _detect_provider(self):
-        """Auto-detect provider from environment variables."""
+        """Auto-detect provider from saved keys file or environment variables."""
+        # Load saved keys from ~/.deepworm_keys first
+        _load_saved_keys()
+
         if os.getenv("OPENROUTER_API_KEY"):
             self.provider = "openrouter"
             self.api_key = os.getenv("OPENROUTER_API_KEY")
@@ -309,3 +312,87 @@ def _parse_yaml_file(path: Path) -> dict[str, Any] | None:
     # Filter to only valid Config fields
     valid_fields = {f.name for f in Config.__dataclass_fields__.values()}
     return {k: v for k, v in data.items() if k in valid_fields} or None
+
+
+# ---------------------------------------------------------------------------
+# Saved API keys management (~/.deepworm_keys)
+# ---------------------------------------------------------------------------
+
+_KEYS_FILE = os.path.expanduser("~/.deepworm_keys")
+
+# Mapping: provider name → environment variable name
+PROVIDER_KEY_ENVS = {
+    "openai": "OPENAI_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "google": "GOOGLE_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
+}
+
+
+def _load_saved_keys() -> None:
+    """Load saved API keys from ~/.deepworm_keys into environment variables.
+
+    Keys are only loaded if the corresponding env var is not already set.
+    File format: one ``ENV_VAR=value`` per line.
+    """
+    if not os.path.exists(_KEYS_FILE):
+        return
+    try:
+        with open(_KEYS_FILE, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip()
+                # Only set if not already in environment
+                if value and not os.getenv(key):
+                    os.environ[key] = value
+    except OSError:
+        pass
+
+
+def save_api_key(provider: str, api_key: str) -> None:
+    """Save an API key for *provider* to ~/.deepworm_keys.
+
+    If the provider already has a key in the file it is updated in-place.
+    The key is also injected into the current process environment.
+    """
+    env_var = PROVIDER_KEY_ENVS.get(provider)
+    if not env_var:
+        return
+
+    # Update current process env
+    os.environ[env_var] = api_key
+
+    # Read existing file
+    lines: list[str] = []
+    found = False
+    if os.path.exists(_KEYS_FILE):
+        with open(_KEYS_FILE, "r") as f:
+            for line in f:
+                if line.strip().startswith(f"{env_var}="):
+                    lines.append(f"{env_var}={api_key}\n")
+                    found = True
+                else:
+                    lines.append(line)
+    if not found:
+        lines.append(f"{env_var}={api_key}\n")
+
+    with open(_KEYS_FILE, "w") as f:
+        f.writelines(lines)
+
+    # Restrict permissions (owner-only read/write)
+    os.chmod(_KEYS_FILE, 0o600)
+
+
+def get_saved_keys_status() -> dict[str, bool]:
+    """Return which providers have API keys configured (env or file)."""
+    _load_saved_keys()
+    return {
+        provider: bool(os.getenv(env_var))
+        for provider, env_var in PROVIDER_KEY_ENVS.items()
+    }
