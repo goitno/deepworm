@@ -164,6 +164,40 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="List available research templates and exit",
     )
+    parser.add_argument(
+        "--interactive", "-i",
+        action="store_true",
+        help="Enter interactive Q&A mode after research completes",
+    )
+    parser.add_argument(
+        "--copy",
+        action="store_true",
+        help="Copy the report to clipboard after completion",
+    )
+    parser.add_argument(
+        "--no-followup",
+        action="store_true",
+        help="Disable follow-up question generation",
+    )
+    parser.add_argument(
+        "--lang",
+        type=str,
+        metavar="CODE",
+        help="Output language code (e.g. en, tr, de, fr, es, zh, ja, ko)",
+    )
+    parser.add_argument(
+        "--list-languages",
+        action="store_true",
+        help="List supported output languages and exit",
+    )
+    parser.add_argument(
+        "--chain",
+        type=int,
+        metavar="STEPS",
+        nargs="?",
+        const=3,
+        help="Run a chain of N research steps, each diving deeper (default: 3)",
+    )
     return parser
 
 
@@ -230,6 +264,23 @@ def main(args: list[str] | None = None) -> None:
         from .web import serve
         serve(port=opts.serve)
         return
+
+    # Handle languages
+    from .languages import get_language, list_languages
+
+    if opts.list_languages:
+        langs = list_languages()
+        console.print("[bold]Supported output languages:[/bold]\n")
+        for lang in langs:
+            console.print(f"  [cyan]{lang.code:<4}[/cyan] {lang.name} ({lang.native_name})")
+        return
+
+    if opts.lang:
+        lang_obj = get_language(opts.lang)
+        if lang_obj is None:
+            console.print(f"[red]Unknown language code: {opts.lang}[/red]")
+            console.print("[dim]Run deepworm --list-languages to see available languages[/dim]")
+            sys.exit(1)
 
     # Handle templates
     from .templates import get_template, list_templates
@@ -298,6 +349,29 @@ def main(args: list[str] | None = None) -> None:
         _output_report(report, opts)
         return
 
+    # Chain mode
+    if opts.chain is not None:
+        if opts.topic is None:
+            console.print("[red]Chain mode requires a topic.[/red]")
+            sys.exit(1)
+        from .chain import research_chain
+        try:
+            report = research_chain(
+                opts.topic,
+                steps=opts.chain,
+                config=config,
+                verbose=not opts.quiet,
+                persona=opts.persona,
+                lang=getattr(opts, "lang", None),
+            )
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Research chain interrupted.[/yellow]")
+            return
+        _output_report(report, opts)
+        if opts.copy:
+            _copy_to_clipboard(report)
+        return
+
     if opts.topic is None:
         # Interactive mode
         console.print("[bold]deepworm[/bold] - AI deep research agent\n")
@@ -320,6 +394,8 @@ def main(args: list[str] | None = None) -> None:
             verbose=not opts.quiet,
             persona=opts.persona,
             stream=opts.stream,
+            followup=not opts.no_followup,
+            lang=getattr(opts, "lang", None),
         )
     except KeyboardInterrupt:
         console.print("\n[yellow]Research interrupted.[/yellow]")
@@ -341,6 +417,90 @@ def main(args: list[str] | None = None) -> None:
         sys.exit(1)
 
     _output_report(report, opts)
+
+    # Copy to clipboard if requested
+    if opts.copy:
+        _copy_to_clipboard(report)
+
+    # Interactive Q&A mode
+    if opts.interactive:
+        _interactive_qa(config, report, opts.topic, cache)
+
+
+def _copy_to_clipboard(text: str) -> None:
+    """Copy text to system clipboard."""
+    import subprocess
+    try:
+        if sys.platform == "darwin":
+            proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
+            proc.communicate(text.encode("utf-8"))
+        elif sys.platform.startswith("linux"):
+            for cmd in [["xclip", "-selection", "clipboard"], ["xsel", "--clipboard", "--input"]]:
+                try:
+                    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+                    proc.communicate(text.encode("utf-8"))
+                    break
+                except FileNotFoundError:
+                    continue
+            else:
+                console.print("[yellow]Install xclip or xsel for clipboard support.[/yellow]")
+                return
+        elif sys.platform == "win32":
+            proc = subprocess.Popen(["clip"], stdin=subprocess.PIPE)
+            proc.communicate(text.encode("utf-16le"))
+        else:
+            console.print("[yellow]Clipboard not supported on this platform.[/yellow]")
+            return
+        console.print("[green]Report copied to clipboard.[/green]")
+    except Exception as e:
+        console.print(f"[yellow]Could not copy to clipboard: {e}[/yellow]")
+
+
+def _interactive_qa(config: "Config", report: str, topic: str, cache) -> None:
+    """Post-research interactive Q&A loop."""
+    from .llm import get_client
+
+    console.print("\n[bold cyan]Interactive mode[/bold cyan] — ask follow-up questions about the report.")
+    console.print("[dim]Type 'exit' or press Ctrl+C to quit.[/dim]\n")
+
+    try:
+        llm = get_client(config)
+    except Exception as e:
+        console.print(f"[red]Error initializing LLM: {e}[/red]")
+        return
+
+    system_msg = (
+        "You are a research assistant. The user has just received the research report below. "
+        "Answer follow-up questions using the report content. If the answer isn't in the report, "
+        "say so and provide your best knowledge.\n\n"
+        f"Research topic: {topic}\n\n"
+        f"Report:\n{report[:6000]}"
+    )
+    messages = [{"role": "system", "content": system_msg}]
+
+    while True:
+        try:
+            question = console.input("[bold green]Q:[/bold green] ")
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[dim]Exiting interactive mode.[/dim]")
+            break
+
+        question = question.strip()
+        if not question:
+            continue
+        if question.lower() in ("exit", "quit", "q"):
+            console.print("[dim]Exiting interactive mode.[/dim]")
+            break
+
+        messages.append({"role": "user", "content": question})
+
+        try:
+            answer = llm.chat(messages, temperature=0.3)
+            messages.append({"role": "assistant", "content": answer})
+            console.print(f"\n[bold blue]A:[/bold blue] {answer}\n")
+        except Exception as e:
+            console.print(f"[red]Error: {e}[/red]\n")
+            messages.pop()
 
 
 def _output_report(report: str, opts: argparse.Namespace) -> None:

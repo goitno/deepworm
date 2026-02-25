@@ -28,6 +28,7 @@ from .llm import LLMClient, get_client
 from .cache import Cache, get_cache
 from .events import Event, EventEmitter, EventType
 from .history import add_entry as _add_history
+from .languages import get_language_instruction
 from .plugins import PluginManager
 from .search import SearchResult, fetch_page_text, search_web
 from .session import save_session
@@ -116,6 +117,19 @@ Guidelines:
 
 Output the report in Markdown format."""
 
+FOLLOWUP_QUESTIONS_PROMPT = """Based on the research report below, suggest 5 follow-up questions that someone interested in this topic would likely want to explore next.
+
+Topic: {topic}
+
+Report summary: {summary}
+
+Return a JSON array of 5 question strings. Questions should:
+- Explore adjacent or deeper aspects of the topic
+- Be specific and researchable
+- Cover different angles (technical, practical, future, historical, comparative)
+
+Example: ["What are the long-term implications of X?", "How does X compare to Y in practice?"]"""
+
 
 class DeepResearcher:
     """Main research engine."""
@@ -164,7 +178,7 @@ class DeepResearcher:
             self.client = get_client(self.config)
         return self.client
 
-    def research(self, topic: str, verbose: bool = True, persona: str | None = None, stream: bool = False) -> str:
+    def research(self, topic: str, verbose: bool = True, persona: str | None = None, stream: bool = False, followup: bool = True, lang: str | None = None) -> str:
         """Run deep research on a topic and return a markdown report.
 
         Args:
@@ -172,6 +186,8 @@ class DeepResearcher:
             verbose: Show progress output.
             persona: Optional perspective for the research (e.g. "startup founder").
             stream: Stream the final report to terminal as it generates.
+            followup: Whether to generate follow-up questions (appended to report).
+            lang: ISO 639-1 language code for report output (e.g. 'tr', 'de', 'fr').
         """
         state = ResearchState(topic=topic)
         llm = self._get_client()
@@ -180,6 +196,12 @@ class DeepResearcher:
         persona_context = ""
         if persona:
             persona_context = f"Write from the perspective of a {persona}. Focus on aspects most relevant to this audience."
+
+        # Apply language instruction
+        if lang:
+            lang_instruction = get_language_instruction(lang)
+            if lang_instruction:
+                persona_context = f"{persona_context}\n\n{lang_instruction}" if persona_context else lang_instruction
 
         if verbose:
             info = (
@@ -293,6 +315,22 @@ class DeepResearcher:
         # Apply post_report hook
         report = self.plugins.apply_post_report(topic, report)
 
+        # Generate follow-up questions
+        if followup:
+            followup_questions = self._generate_followup_questions_list(llm, topic, report)
+        else:
+            followup_questions = []
+        if followup_questions:
+            followup_section = "\n\n## Follow-up Questions\n\n"
+            for idx, q in enumerate(followup_questions, 1):
+                followup_section += f"{idx}. {q}\n"
+            report += followup_section
+            self.events.emit(Event(
+                type=EventType.SYNTHESIS_COMPLETE,
+                data={"followup_questions": followup_questions},
+                message=f"Generated {len(followup_questions)} follow-up questions",
+            ))
+
         # Mark session as completed
         try:
             state_data = {
@@ -376,6 +414,25 @@ class DeepResearcher:
         except Exception:
             pass
         return [state.topic]
+
+    def _generate_followup_questions_list(self, llm: LLMClient, topic: str, report: str) -> list[str]:
+        """Generate follow-up questions based on the completed report."""
+        # Use first ~2000 chars of report as summary to stay within limits
+        summary = report[:2000]
+        prompt = FOLLOWUP_QUESTIONS_PROMPT.format(
+            topic=topic,
+            summary=summary,
+        )
+        try:
+            result = llm.chat_json([
+                {"role": "system", "content": "You return only valid JSON arrays."},
+                {"role": "user", "content": prompt},
+            ])
+            if isinstance(result, list):
+                return [str(q) for q in result[:5]]
+        except Exception:
+            logger.debug("Failed to generate follow-up questions")
+        return []
 
     def _search_and_fetch(
         self,

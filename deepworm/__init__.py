@@ -5,6 +5,7 @@ import logging
 __version__ = "0.2.0"
 
 from .async_api import AsyncResearcher, async_research
+from .chain import research_chain
 from .events import Event, EventEmitter, EventType
 from .exceptions import (
     APIKeyError,
@@ -19,6 +20,7 @@ from .exceptions import (
     SessionError,
 )
 from .history import HistoryEntry
+from .languages import Language, get_language, list_languages
 from .researcher import DeepResearcher
 
 __all__ = [
@@ -32,6 +34,7 @@ __all__ = [
     "EventEmitter",
     "EventType",
     "HistoryEntry",
+    "Language",
     "ModelNotFoundError",
     "NetworkError",
     "ProviderError",
@@ -40,7 +43,10 @@ __all__ = [
     "SessionError",
     "__version__",
     "async_research",
+    "get_language",
+    "list_languages",
     "research",
+    "research_chain",
 ]
 
 # Set up default logging (NullHandler to avoid "No handlers" warnings)
