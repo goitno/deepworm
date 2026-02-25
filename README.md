@@ -118,16 +118,28 @@ deepworm auto-detects your provider from environment variables:
 ## CLI Options
 
 ```
-deepworm "topic"               # research with auto-detected provider
-deepworm "topic" -d 3          # 3 iterations (deeper research)
-deepworm "topic" -b 6          # 6 queries per iteration (broader)
-deepworm "topic" -m gpt-4o     # use specific model
-deepworm "topic" -p ollama     # force Ollama provider
-deepworm "topic" -o report.md  # save to file
-deepworm "topic" -q            # quiet mode (no progress output)
-deepworm "topic" --json        # output as JSON (for piping)
-deepworm                       # interactive mode (prompts for topic)
+deepworm "topic"                                    # research a topic
+deepworm "topic" -d 3                               # 3 iterations (deeper)
+deepworm "topic" -b 6                               # 6 queries per iteration (broader)
+deepworm "topic" -m gpt-4o                          # use specific model
+deepworm "topic" -p ollama                          # force Ollama provider
+deepworm "topic" -o report.md                       # save to file
+deepworm "topic" -q                                 # quiet mode
+deepworm "topic" --json                             # JSON output for piping
+deepworm "topic" --persona "startup founder"        # research perspective
+deepworm --compare "React" "Vue" "Svelte"           # compare topics
+deepworm                                            # interactive mode
 ```
+
+## Comparison Mode
+
+Compare multiple topics side by side:
+
+```bash
+deepworm --compare "PostgreSQL" "MySQL" "SQLite" -o comparison.md
+```
+
+This researches each topic individually, then generates a structured comparison with tables and analysis.
 
 ## Python API
 
@@ -142,6 +154,10 @@ report = research("your topic")
 config = Config(provider="ollama", depth=3, breadth=6)
 researcher = DeepResearcher(config=config)
 report = researcher.research("your topic")
+
+# Comparison
+from deepworm.compare import compare
+report = compare(["React", "Vue", "Svelte"])
 ```
 
 ## vs. gpt-researcher

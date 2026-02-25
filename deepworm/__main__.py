@@ -28,6 +28,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Research topic or question",
     )
     parser.add_argument(
+        "--compare",
+        nargs="+",
+        metavar="TOPIC",
+        help="Compare multiple topics (e.g. --compare 'React' 'Vue' 'Svelte')",
+    )
+    parser.add_argument(
         "--depth", "-d",
         type=int,
         default=None,
@@ -95,6 +101,36 @@ def main(args: list[str] | None = None) -> None:
     if opts.debug:
         logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s: %(message)s")
 
+    # Build config early (needed for both modes)
+    config = Config.auto()
+
+    if opts.provider:
+        config.provider = opts.provider
+        if opts.model is None:
+            config.model = config._default_model(opts.provider)
+    if opts.model:
+        config.model = opts.model
+    if opts.depth:
+        config.depth = opts.depth
+    if opts.breadth:
+        config.breadth = opts.breadth
+
+    # Comparison mode
+    if opts.compare:
+        from .compare import compare
+        try:
+            report = compare(
+                opts.compare,
+                config=config,
+                verbose=not opts.quiet,
+                persona=opts.persona,
+            )
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Research interrupted.[/yellow]")
+            return
+        _output_report(report, opts)
+        return
+
     if opts.topic is None:
         # Interactive mode
         console.print("[bold]deepworm[/bold] - AI deep research agent\n")
@@ -107,22 +143,6 @@ def main(args: list[str] | None = None) -> None:
             console.print("[red]No topic provided.[/red]")
             return
         opts.topic = topic.strip()
-
-    # Build config
-    config = Config.auto()
-
-    if opts.provider:
-        config.provider = opts.provider
-        # Reset model to default for new provider if not explicitly set
-        if opts.model is None:
-            config.model = config._default_model(opts.provider)
-
-    if opts.model:
-        config.model = opts.model
-    if opts.depth:
-        config.depth = opts.depth
-    if opts.breadth:
-        config.breadth = opts.breadth
 
     # Run research
     researcher = DeepResearcher(config=config)
@@ -137,20 +157,22 @@ def main(args: list[str] | None = None) -> None:
         console.print("\n[yellow]Research interrupted.[/yellow]")
         return
 
-    # Output
+    _output_report(report, opts)
+
+
+def _output_report(report: str, opts: argparse.Namespace) -> None:
+    """Handle report output based on CLI options."""
+    topic = opts.topic or "comparison"
     if opts.json_output:
-        import time
         result = {
-            "topic": opts.topic,
-            "provider": config.provider,
-            "model": config.model,
-            "depth": config.depth,
-            "breadth": config.breadth,
+            "topic": topic,
             "report": report,
         }
+        if opts.compare:
+            result["topics"] = opts.compare
         print(json.dumps(result, indent=2))
     elif opts.output:
-        path = save_report(report, opts.output, topic=opts.topic)
+        path = save_report(report, opts.output, topic=topic)
         console.print(f"\n[green]Report saved to {path}[/green]")
     else:
         print_report(report)
