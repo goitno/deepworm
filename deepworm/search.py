@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from typing import Optional
 from urllib.parse import quote_plus, unquote
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -30,8 +33,16 @@ def search_web(
     query: str,
     max_results: int = 8,
     region: str = "wt-wt",
+    cache: "Cache | None" = None,
 ) -> list[SearchResult]:
     """Search the web using DuckDuckGo HTML."""
+    # Check cache first
+    if cache is not None:
+        cached = cache.get("search", query)
+        if cached is not None:
+            logger.debug("Search cache hit: %s", query[:60])
+            return [SearchResult(**r) for r in cached]
+
     results: list[SearchResult] = []
     try:
         # Try the duckduckgo_search / ddgs library first
@@ -46,7 +57,16 @@ def search_web(
         except Exception:
             pass
 
-    return results[:max_results]
+    results = results[:max_results]
+
+    # Store in cache
+    if cache is not None and results:
+        cache.set("search", query, [
+            {"title": r.title, "url": r.url, "snippet": r.snippet}
+            for r in results
+        ])
+
+    return results
 
 
 def _search_ddgs(query: str, max_results: int) -> list[SearchResult]:
@@ -114,12 +134,19 @@ def _extract_ddg_url(href: str) -> str:
     return href
 
 
-def fetch_page_text(url: str, timeout: float = 10.0) -> str:
+def fetch_page_text(url: str, timeout: float = 10.0, cache: "Cache | None" = None) -> str:
     """Fetch and extract text content from a URL."""
     # Skip non-text URLs
     skip_extensions = ('.pdf', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.mp4', '.mp3', '.zip', '.tar', '.gz')
     if any(url.lower().endswith(ext) for ext in skip_extensions):
         return ""
+
+    # Check cache first
+    if cache is not None:
+        cached = cache.get("page", url)
+        if cached is not None:
+            logger.debug("Page cache hit: %s", url[:80])
+            return cached
 
     try:
         resp = httpx.get(url, headers=_HEADERS, timeout=timeout, follow_redirects=True)
@@ -134,6 +161,11 @@ def fetch_page_text(url: str, timeout: float = 10.0) -> str:
         # Truncate to reasonable length
         if len(text) > 8000:
             text = text[:8000]
+
+        # Store in cache
+        if cache is not None and text:
+            cache.set("page", url, text)
+
         return text
     except Exception:
         return ""

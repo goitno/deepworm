@@ -24,6 +24,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .config import Config
 from .llm import LLMClient, get_client
+from .cache import Cache, get_cache
 from .search import SearchResult, fetch_page_text, search_web
 
 console = Console()
@@ -115,10 +116,12 @@ class DeepResearcher:
         self,
         config: Optional[Config] = None,
         on_progress: Optional[Callable[[str], None]] = None,
+        cache: Optional[Cache] = None,
     ):
         self.config = config or Config.auto()
         self.client: Optional[LLMClient] = None
         self._on_progress = on_progress
+        self.cache = cache if cache is not None else get_cache()
 
     def _progress(self, msg: str) -> None:
         if self._on_progress:
@@ -262,7 +265,7 @@ class DeepResearcher:
 
         # Collect unique URLs from all queries
         for query in queries:
-            results = search_web(query, max_results=self.config.max_sources)
+            results = search_web(query, max_results=self.config.max_sources, cache=self.cache)
             for r in results:
                 if r.url not in seen_urls:
                     seen_urls.add(r.url)
@@ -270,7 +273,7 @@ class DeepResearcher:
 
         # Fetch pages concurrently
         def _fetch(result: SearchResult) -> Source:
-            body = fetch_page_text(result.url)
+            body = fetch_page_text(result.url, cache=self.cache)
             return Source(
                 url=result.url,
                 title=result.title,

@@ -91,6 +91,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Enable debug logging",
     )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable disk cache for search results and pages",
+    )
+    parser.add_argument(
+        "--clear-cache",
+        action="store_true",
+        help="Clear the cache and exit",
+    )
     return parser
 
 
@@ -100,6 +110,17 @@ def main(args: list[str] | None = None) -> None:
 
     if opts.debug:
         logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s: %(message)s")
+
+    # Handle cache operations
+    from .cache import Cache, get_cache
+
+    if opts.clear_cache:
+        cache = get_cache()
+        count = cache.clear()
+        console.print(f"[green]Cleared {count} cached entries.[/green]")
+        return
+
+    cache = get_cache(enabled=not opts.no_cache)
 
     # Build config early (needed for both modes)
     config = Config.auto()
@@ -145,7 +166,7 @@ def main(args: list[str] | None = None) -> None:
         opts.topic = topic.strip()
 
     # Run research
-    researcher = DeepResearcher(config=config)
+    researcher = DeepResearcher(config=config, cache=cache)
 
     try:
         report = researcher.research(
