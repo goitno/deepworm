@@ -1,6 +1,14 @@
 # DeepWorm 🐁
 
+[![PyPI](https://img.shields.io/pypi/v/deepworm)](https://pypi.org/project/deepworm/)
+[![Python](https://img.shields.io/pypi/pyversions/deepworm)](https://pypi.org/project/deepworm/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
 AI deep research tool that searches the web, reads sources, and synthesizes findings into comprehensive reports.
+
+**Works 100% free** with Ollama (local LLM) + DuckDuckGo (no API key needed for search). Also supports OpenAI, Google Gemini, and Anthropic Claude.
+
+No Langchain dependency. No paid search APIs required. Just `pip install deepworm` and go.
 
 ## Quick Start
 
