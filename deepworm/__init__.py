@@ -4,10 +4,20 @@ import logging
 
 __version__ = "0.1.0"
 
+from .async_api import AsyncResearcher, async_research
 from .events import Event, EventEmitter, EventType
 from .researcher import DeepResearcher
 
-__all__ = ["DeepResearcher", "Event", "EventEmitter", "EventType", "__version__"]
+__all__ = [
+    "AsyncResearcher",
+    "DeepResearcher",
+    "Event",
+    "EventEmitter",
+    "EventType",
+    "__version__",
+    "async_research",
+    "research",
+]
 
 # Set up default logging (NullHandler to avoid "No handlers" warnings)
 logging.getLogger("deepworm").addHandler(logging.NullHandler())
