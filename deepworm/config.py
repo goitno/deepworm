@@ -32,8 +32,8 @@ class Config:
     temperature: float = 0.1
 
     # Research settings
-    depth: int = 2
-    breadth: int = 4
+    depth: int = 1
+    breadth: int = 1
     max_sources: int = 10
 
     # Output settings
@@ -99,7 +99,7 @@ class Config:
         defaults = {
             "openai": "gpt-4o-mini",
             "anthropic": "claude-3-5-haiku-latest",
-            "google": "gemini-2.5-flash",
+            "google": "gemini-2.0-flash",
             "ollama": "llama3.2",
         }
         return defaults.get(provider or self.provider, "gpt-4o-mini")

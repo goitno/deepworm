@@ -11,8 +11,8 @@ def test_default_config():
     config = Config.auto()
     assert config.provider in ("openai", "anthropic", "google", "ollama")
     assert config.model is not None
-    assert config.depth == 2
-    assert config.breadth == 4
+    assert config.depth == 1
+    assert config.breadth == 1
 
 
 def test_ollama_config():
@@ -33,7 +33,7 @@ def test_default_models():
     for provider, expected in [
         ("openai", "gpt-4o-mini"),
         ("anthropic", "claude-3-5-haiku-latest"),
-        ("google", "gemini-2.5-flash"),
+        ("google", "gemini-2.0-flash"),
         ("ollama", "llama3.2"),
     ]:
         config = Config(provider=provider, api_key="test")

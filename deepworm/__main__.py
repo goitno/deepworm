@@ -40,13 +40,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--depth", "-d",
         type=int,
         default=None,
-        help="Number of research iterations (default: 2)",
+        help="Number of research iterations (default: 1)",
     )
     parser.add_argument(
         "--breadth", "-b",
         type=int,
         default=None,
-        help="Number of search queries per iteration (default: 4)",
+        help="Number of search queries per iteration (default: 1)",
     )
     parser.add_argument(
         "--model", "-m",
@@ -1240,9 +1240,22 @@ def _show_help() -> None:
     console.print()
 
     console.print("  [bold]Quick config:[/bold]")
-    console.print("  [dim]/set provider google[/dim]")
-    console.print("  [dim]/set model gemini-2.5-flash[/dim]")
-    console.print("  [dim]/set depth 3[/dim]")
+    console.print("  [dim]/set provider google      \u2190 Switch LLM provider[/dim]")
+    console.print("  [dim]/set model gemini-2.0-flash \u2190 Change model[/dim]")
+    console.print("  [dim]/set depth 3               \u2190 More research iterations[/dim]")
+    console.print("  [dim]/set breadth 4              \u2190 More search queries per iteration[/dim]")
+    console.print()
+
+    console.print("  [bold]What is depth & breadth?[/bold]")
+    console.print("  [dim]depth  = Number of research rounds (1=quick, 3=thorough, 5=very deep)[/dim]")
+    console.print("  [dim]breadth = Search queries per round (1=focused, 4=broad, 8=exhaustive)[/dim]")
+    console.print()
+
+    console.print("  [bold]What is graph?[/bold]")
+    console.print("  [dim]Graph extracts concepts & links from your report after research.[/dim]")
+    console.print("  [dim]It shows which ideas are connected and how. Use it AFTER research:[/dim]")
+    console.print("  [dim]  \u2022 Inline:  bitcoin 2027 --graph     (auto-graph after research)[/dim]")
+    console.print("  [dim]  \u2022 On file: /graph report.md          (graph from existing file)[/dim]")
     console.print()
 
     console.print("  [bold]Examples:[/bold]")
