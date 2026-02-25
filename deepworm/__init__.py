@@ -21,6 +21,7 @@ from .exceptions import (
 )
 from .history import HistoryEntry
 from .languages import Language, get_language, list_languages
+from .outline import OutlineSection, ReportOutline, generate_outline, outline_from_report
 from .planner import ResearchPlan, generate_plan, estimate_complexity
 from .researcher import DeepResearcher
 from .scoring import QualityScore, score_report
@@ -40,9 +41,11 @@ __all__ = [
     "Language",
     "ModelNotFoundError",
     "NetworkError",
+    "OutlineSection",
     "ProviderError",
     "QualityScore",
     "RateLimitError",
+    "ReportOutline",
     "ResearchPlan",
     "SearchError",
     "SessionError",
@@ -50,9 +53,11 @@ __all__ = [
     "__version__",
     "async_research",
     "estimate_complexity",
+    "generate_outline",
     "generate_plan",
     "get_language",
     "list_languages",
+    "outline_from_report",
     "research",
     "research_chain",
     "score_report",
