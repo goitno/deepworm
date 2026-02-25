@@ -970,7 +970,6 @@ def _arrow_select(items: list[tuple[str, str]], title: str = "") -> int | None:
 
     def _render(first: bool = False) -> None:
         if not first:
-            # Move cursor up to overwrite previous menu
             sys.stdout.write(f"\033[{len(items)}A")
         for i, (label, desc) in enumerate(items):
             if i == selected:
@@ -986,24 +985,23 @@ def _arrow_select(items: list[tuple[str, str]], title: str = "") -> int | None:
             ch = sys.stdin.read(1)
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-            if ch == "\x1b":  # Escape sequence
+            if ch == "\x1b":
                 tty.setraw(fd)
                 ch2 = sys.stdin.read(1)
                 if ch2 == "[":
                     ch3 = sys.stdin.read(1)
                     termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                    if ch3 == "A":  # Up
+                    if ch3 == "A":
                         selected = (selected - 1) % len(items)
-                    elif ch3 == "B":  # Down
+                    elif ch3 == "B":
                         selected = (selected + 1) % len(items)
                 else:
                     termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                    # Bare Escape = cancel
                     return None
                 _render()
-            elif ch in ("\r", "\n"):  # Enter
+            elif ch in ("\r", "\n"):
                 return selected
-            elif ch in ("\x03", "\x04"):  # Ctrl-C / Ctrl-D
+            elif ch in ("\x03", "\x04"):
                 return None
             elif ch == "q":
                 return None
@@ -1014,39 +1012,231 @@ def _arrow_select(items: list[tuple[str, str]], title: str = "") -> int | None:
         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
 
-def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> None:
-    """Interactive CLI shell — Claude Code style experience with readline support."""
-    import time as _time
-    import readline as _readline
+def _tui_input(
+    prompt_str: str,
+    menu_items: list[tuple[str, str]],
+    cmd_history: list[str] | None = None,
+) -> tuple[str, str]:
+    """TUI input with always-visible menu above the prompt.
 
-    # ---- Readline setup for arrow-key history & tab completion ----
-    _HISTORY_FILE = os.path.expanduser("~/.deepworm_history")
-    _COMMANDS = [
-        "/help", "/compare", "/polish", "/graph", "/config",
-        "/models", "/history", "/set", "/clear", "/exit",
-    ]
+    The menu is drawn above the input line.  When the text buffer is empty
+    the user can press ↑ to enter menu-navigation mode (items highlight),
+    ↓ past the last item returns to input mode.  In input mode the user
+    types normally (with basic editing: backspace, left/right, home/end).
+    UP/DOWN in input mode with prior history navigates command history.
 
-    def _completer(text: str, state: int) -> str | None:
-        if text.startswith("/"):
-            matches = [c for c in _COMMANDS if c.startswith(text)]
-        else:
-            matches = []
-        return matches[state] if state < len(matches) else None
+    Returns
+    -------
+    (mode, value)
+        ``("input", "<text>")`` – user typed something and pressed Enter
+        ``("menu", "<label>")`` – user selected a menu item
+        ``("exit", "")``       – Ctrl-C / Ctrl-D (empty buffer)
+    """
+    import sys
+    import tty
+    import termios
 
-    _readline.set_completer(_completer)
-    _readline.parse_and_bind("tab: complete")
-    _readline.set_completer_delims(" \t\n")
-    _readline.set_history_length(500)
+    if cmd_history is None:
+        cmd_history = []
+
+    n = len(menu_items)
+    fd = sys.stdin.fileno()
+    old = termios.tcgetattr(fd)
+
+    buf: list[str] = []
+    pos = 0          # cursor position in buffer
+    in_menu = False
+    m_idx = 0
+    hist_idx = len(cmd_history)
+    saved_buf: list[str] | None = None  # buffer saved when entering history
+
+    w = sys.stdout.write
+    fl = sys.stdout.flush
+
+    # -- rendering helpers --------------------------------------------------
+
+    def _draw_menu() -> None:
+        for i, (label, desc) in enumerate(menu_items):
+            w("\033[2K")
+            if in_menu and i == m_idx:
+                w(f"  \033[36;1m› {label:<14}\033[0m {desc}\n")
+            else:
+                w(f"    \033[2m{label:<14} {desc}\033[0m\n")
+
+    def _draw_prompt() -> None:
+        w("\033[2K")
+        text = "".join(buf)
+        w(f"{prompt_str}{text}")
+        back = len(buf) - pos
+        if back > 0:
+            w(f"\033[{back}D")
+
+    def _full() -> None:
+        """Draw menu + blank separator + prompt (no leading newline)."""
+        _draw_menu()
+        w("\033[2K\n")  # blank line between menu and prompt
+        _draw_prompt()
+        fl()
+
+    def _refresh() -> None:
+        """Re-render in-place: move up to the first menu line and redraw."""
+        w(f"\033[{n + 1}A\r")  # move up n menu lines + 1 blank line
+        _full()
+
+    # -- initial render -----------------------------------------------------
+    w("\n")  # small gap before menu
+    _full()
+
     try:
-        _readline.read_history_file(_HISTORY_FILE)
-    except (FileNotFoundError, OSError):
-        pass
+        while True:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+            termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
-    def _save_history() -> None:
-        try:
-            _readline.write_history_file(_HISTORY_FILE)
-        except OSError:
-            pass
+            # --- Escape sequences (arrows, etc.) ---
+            if ch == "\x1b":
+                tty.setraw(fd)
+                ch2 = sys.stdin.read(1)
+                if ch2 == "[":
+                    ch3 = sys.stdin.read(1)
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+                    if ch3 == "A":  # ↑
+                        if in_menu:
+                            if m_idx > 0:
+                                m_idx -= 1
+                            # else: already at top, stay
+                        elif not buf:
+                            # empty input → enter menu from the bottom
+                            in_menu = True
+                            m_idx = n - 1
+                        else:
+                            # history navigation
+                            if hist_idx > 0:
+                                if hist_idx == len(cmd_history):
+                                    saved_buf = list(buf)
+                                hist_idx -= 1
+                                buf[:] = list(cmd_history[hist_idx])
+                                pos = len(buf)
+                        _refresh()
+
+                    elif ch3 == "B":  # ↓
+                        if in_menu:
+                            if m_idx < n - 1:
+                                m_idx += 1
+                            else:
+                                in_menu = False
+                        elif cmd_history and hist_idx < len(cmd_history):
+                            hist_idx += 1
+                            if hist_idx == len(cmd_history):
+                                buf[:] = saved_buf if saved_buf is not None else []
+                                saved_buf = None
+                            else:
+                                buf[:] = list(cmd_history[hist_idx])
+                            pos = len(buf)
+                        _refresh()
+
+                    elif ch3 == "C":  # →
+                        if not in_menu and pos < len(buf):
+                            pos += 1
+                            w("\033[C")
+                            fl()
+
+                    elif ch3 == "D":  # ←
+                        if not in_menu and pos > 0:
+                            pos -= 1
+                            w("\033[D")
+                            fl()
+
+                    elif ch3 == "H":  # Home
+                        if not in_menu and pos > 0:
+                            pos = 0
+                            w("\r")
+                            _draw_prompt()
+                            fl()
+
+                    elif ch3 == "F":  # End
+                        if not in_menu:
+                            pos = len(buf)
+                            w("\r")
+                            _draw_prompt()
+                            fl()
+
+                else:
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old)
+                    # bare Escape – leave menu if active
+                    if in_menu:
+                        in_menu = False
+                        _refresh()
+
+            # --- Enter ---
+            elif ch in ("\r", "\n"):
+                w("\n")
+                fl()
+                if in_menu:
+                    return ("menu", menu_items[m_idx][0])
+                text = "".join(buf).strip()
+                if text:
+                    cmd_history.append(text)
+                return ("input", text)
+
+            # --- Backspace ---
+            elif ch in ("\x7f", "\x08"):
+                if not in_menu and pos > 0:
+                    buf.pop(pos - 1)
+                    pos -= 1
+                    w("\r")
+                    _draw_prompt()
+                    # clear trailing char
+                    w(" \b")
+                    back = len(buf) - pos
+                    if back > 0:
+                        w(f"\033[{back}D")
+                    fl()
+
+            # --- Ctrl-C ---
+            elif ch == "\x03":
+                w("\n")
+                fl()
+                return ("exit", "")
+
+            # --- Ctrl-D ---
+            elif ch == "\x04":
+                if not buf:
+                    w("\n")
+                    fl()
+                    return ("exit", "")
+
+            # --- Ctrl-U (clear line) ---
+            elif ch == "\x15":
+                if not in_menu:
+                    buf.clear()
+                    pos = 0
+                    w("\r")
+                    _draw_prompt()
+                    fl()
+
+            # --- Printable character ---
+            elif not in_menu and 32 <= ord(ch) < 127:
+                buf.insert(pos, ch)
+                pos += 1
+                w("\r")
+                _draw_prompt()
+                fl()
+
+    except Exception:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+        return ("exit", "")
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
+def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> None:
+    """Interactive CLI shell — Claude Code style TUI with always-visible menu."""
+    import time as _time
+
+    # Persistent command history (shared with _tui_input)
+    _cmd_history: list[str] = []
 
     # Detect provider info
     provider_info = f"{config.provider}/{config.model}"
@@ -1061,36 +1251,117 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
         expand=False,
     ))
     console.print()
-    console.print("  [dim]Just type a topic to start researching. Use[/dim] [cyan]/help[/cyan] [dim]for commands.[/dim]")
-    console.print()
+    console.print("  [dim]Type a topic to research  •  ↑ to browse commands  •  Enter to select[/dim]")
 
     total_tokens = 0
     session_start = _time.time()
     researches_done = 0
 
-    while True:
-        try:
-            # Build prompt — plain text for readline (no Rich markup)
-            if total_tokens > 0:
-                elapsed = _time.time() - session_start
-                prompt_str = f"\033[1;34mdeepworm\033[0m \033[2m({total_tokens:,} tokens | {elapsed:.0f}s)\033[0m > "
-            else:
-                prompt_str = "\033[1;34mdeepworm\033[0m > "
+    # Menu items shown above the prompt
+    _MENU = [
+        ("help", "Show all commands"),
+        ("models", "List & switch models"),
+        ("config", "Show current config"),
+        ("set", "Change a setting"),
+        ("compare", "Compare topics"),
+        ("history", "Research history"),
+        ("clear", "Clear screen"),
+        ("exit", "Exit deepworm"),
+    ]
 
-            user_input = input(prompt_str).strip()
-        except (KeyboardInterrupt, EOFError):
-            _save_history()
-            console.print("\n[dim]Goodbye![/dim]")
+    while True:
+        # Build prompt string
+        if total_tokens > 0:
+            elapsed = _time.time() - session_start
+            prompt_str = f"\033[1;34mdeepworm\033[0m \033[2m({total_tokens:,} tokens | {elapsed:.0f}s)\033[0m > "
+        else:
+            prompt_str = "\033[1;34mdeepworm\033[0m > "
+
+        mode, value = _tui_input(prompt_str, _MENU, _cmd_history)
+
+        if mode == "exit":
+            elapsed = _time.time() - session_start
+            console.print()
+            if researches_done > 0:
+                summary = Table(show_header=False, box=None, padding=(0, 2))
+                summary.add_column(style="bold")
+                summary.add_column()
+                summary.add_row("Session", f"{elapsed:.0f}s")
+                summary.add_row("Researches", str(researches_done))
+                summary.add_row("Total tokens", f"{total_tokens:,}")
+                console.print(Panel(summary, title="[dim]Session Summary[/dim]", border_style="dim", expand=False))
+            console.print("[dim]Goodbye![/dim]")
             break
 
+        if mode == "menu":
+            label = value
+            if label == "exit":
+                elapsed = _time.time() - session_start
+                console.print()
+                if researches_done > 0:
+                    summary = Table(show_header=False, box=None, padding=(0, 2))
+                    summary.add_column(style="bold")
+                    summary.add_column()
+                    summary.add_row("Session", f"{elapsed:.0f}s")
+                    summary.add_row("Researches", str(researches_done))
+                    summary.add_row("Total tokens", f"{total_tokens:,}")
+                    console.print(Panel(summary, title="[dim]Session Summary[/dim]", border_style="dim", expand=False))
+                console.print("[dim]Goodbye![/dim]")
+                break
+            elif label == "help":
+                _show_help()
+            elif label == "models":
+                _show_models_interactive(config)
+            elif label == "config":
+                _show_config(config)
+            elif label == "set":
+                console.print("  [dim]Usage: /set <key> <value>[/dim]")
+                console.print("  [dim]Keys: provider, model, depth, breadth, max_sources[/dim]")
+                try:
+                    setting = input("  /set ").strip()
+                    if setting:
+                        _handle_set_command(f"/set {setting}", config)
+                except (KeyboardInterrupt, EOFError):
+                    console.print()
+            elif label == "compare":
+                console.print("  [dim]Enter topics separated by commas:[/dim]")
+                try:
+                    topics_str = input("  Topics: ").strip()
+                except (KeyboardInterrupt, EOFError):
+                    console.print()
+                    continue
+                if not topics_str:
+                    continue
+                topics = [t.strip().strip("'\"") for t in topics_str.split(",")]
+                if len(topics) < 2:
+                    console.print("[yellow]Need at least 2 topics to compare.[/yellow]")
+                    continue
+                console.print(f"[dim]Comparing: {', '.join(topics)}[/dim]")
+                try:
+                    from .compare import compare
+                    report = compare(topics, config=config, verbose=True)
+                    from .report import print_report
+                    print_report(report)
+                    researches_done += 1
+                except KeyboardInterrupt:
+                    console.print("\n[yellow]Comparison interrupted.[/yellow]")
+                except Exception as e:
+                    console.print(f"[red]Error: {e}[/red]")
+            elif label == "history":
+                _show_history_interactive()
+            elif label == "clear":
+                os.system("cls" if os.name == "nt" else "clear")
+            continue
+
+        # mode == "input"
+        user_input = value
         if not user_input:
             continue
 
-        # --- Commands ---
         cmd_lower = user_input.lower()
 
+        # --- Slash commands typed directly ---
         if cmd_lower in ("/exit", "/quit", "/q", "exit", "quit"):
-            _save_history()
             elapsed = _time.time() - session_start
             console.print()
             if researches_done > 0:
@@ -1127,103 +1398,6 @@ def _interactive_shell(opts: argparse.Namespace, config: "Config", cache) -> Non
         if cmd_lower in ("/clear",):
             os.system("cls" if os.name == "nt" else "clear")
             continue
-
-        if user_input == "/":
-            # Interactive arrow-key command menu
-            _menu_items = [
-                ("help", "Show all commands"),
-                ("models", "List & switch models"),
-                ("config", "Show configuration"),
-                ("set", "Change a setting"),
-                ("compare", "Compare topics"),
-                ("polish", "Analyze a report"),
-                ("graph", "Extract knowledge graph"),
-                ("history", "Research history"),
-                ("clear", "Clear screen"),
-                ("exit", "Exit deepworm"),
-            ]
-            console.print("\n  [dim]↑↓ to move, Enter to select, Esc to cancel[/dim]\n")
-            idx = _arrow_select(_menu_items)
-            if idx is None:
-                continue
-            label = _menu_items[idx][0]
-            if label == "help":
-                _show_help()
-            elif label == "models":
-                _show_models_interactive(config)
-            elif label == "config":
-                _show_config(config)
-            elif label == "set":
-                console.print("  [dim]Usage: /set <key> <value>[/dim]")
-                console.print("  [dim]Keys: provider, model, depth, breadth, max_sources[/dim]")
-                try:
-                    setting = input("  /set ").strip()
-                    if setting:
-                        _handle_set_command(f"/set {setting}", config)
-                except (KeyboardInterrupt, EOFError):
-                    console.print()
-            elif label == "compare":
-                console.print("  [dim]Enter topics separated by commas:[/dim]")
-                try:
-                    topics_str = input("  Topics: ").strip()
-                    if topics_str:
-                        user_input = f"/compare {topics_str}"
-                        cmd_lower = user_input.lower()
-                        # Fall through to /compare handler below
-                    else:
-                        continue
-                except (KeyboardInterrupt, EOFError):
-                    console.print()
-                    continue
-            elif label == "polish":
-                console.print("  [dim]Enter file path:[/dim]")
-                try:
-                    fpath = input("  File: ").strip()
-                    if fpath:
-                        user_input = f"/polish {fpath}"
-                        cmd_lower = user_input.lower()
-                        # Fall through to /polish handler below
-                    else:
-                        continue
-                except (KeyboardInterrupt, EOFError):
-                    console.print()
-                    continue
-            elif label == "graph":
-                console.print("  [dim]Enter file path:[/dim]")
-                try:
-                    fpath = input("  File: ").strip()
-                    if fpath:
-                        user_input = f"/graph {fpath}"
-                        cmd_lower = user_input.lower()
-                        # Fall through to /graph handler below
-                    else:
-                        continue
-                except (KeyboardInterrupt, EOFError):
-                    console.print()
-                    continue
-            elif label == "history":
-                _show_history_interactive()
-            elif label == "clear":
-                os.system("cls" if os.name == "nt" else "clear")
-            elif label == "exit":
-                user_input = "/exit"
-                cmd_lower = "/exit"
-                # Fall through to exit handler at top of loop... but we're past it
-                _save_history()
-                elapsed = _time.time() - session_start
-                console.print()
-                if researches_done > 0:
-                    summary = Table(show_header=False, box=None, padding=(0, 2))
-                    summary.add_column(style="bold")
-                    summary.add_column()
-                    summary.add_row("Session", f"{elapsed:.0f}s")
-                    summary.add_row("Researches", str(researches_done))
-                    summary.add_row("Total tokens", f"{total_tokens:,}")
-                    console.print(Panel(summary, title="[dim]Session Summary[/dim]", border_style="dim", expand=False))
-                console.print("[dim]Goodbye![/dim]")
-                break
-            if label not in ("compare", "polish", "graph"):
-                continue
 
         if cmd_lower.startswith("/compare"):
             parts = user_input.split(maxsplit=1)
