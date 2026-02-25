@@ -36,6 +36,7 @@ class Source:
     title: str
     content: str
     findings: str = ""
+    relevance: float = 0.0  # 0-1 relevance score
 
 
 @dataclass
@@ -154,8 +155,11 @@ class DeepResearcher:
                 info += f"\nPersona: {persona}"
             console.print(Panel(info, title="deepworm research", border_style="blue"))
 
+        t_start = time.time()
+
         for i in range(self.config.depth):
             state.iterations_done = i + 1
+            t_iter = time.time()
 
             if verbose:
                 console.print(f"\n[bold cyan]--- Iteration {i + 1}/{self.config.depth} ---[/bold cyan]")
@@ -191,7 +195,10 @@ class DeepResearcher:
                 source.findings = findings
                 state.findings.append(findings)
 
+            elapsed = time.time() - t_iter
             self._progress(f"Completed iteration {i + 1}")
+            if verbose:
+                console.print(f"[dim]Iteration completed in {elapsed:.1f}s[/dim]")
 
         # Synthesize
         if verbose:
@@ -199,8 +206,9 @@ class DeepResearcher:
 
         report = self._synthesize(llm, state, persona_context)
 
+        total_time = time.time() - t_start
         if verbose:
-            console.print("[bold green]Done![/bold green]\n")
+            console.print(f"[bold green]Done![/bold green] [dim]({total_time:.1f}s total, {len(state.sources)} sources)[/dim]\n")
 
         return report
 
