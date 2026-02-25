@@ -21,6 +21,7 @@ from .exceptions import (
 )
 from .history import HistoryEntry
 from .languages import Language, get_language, list_languages
+from .planner import ResearchPlan, generate_plan, estimate_complexity
 from .researcher import DeepResearcher
 from .scoring import QualityScore, score_report
 
@@ -41,10 +42,13 @@ __all__ = [
     "ProviderError",
     "QualityScore",
     "RateLimitError",
+    "ResearchPlan",
     "SearchError",
     "SessionError",
     "__version__",
     "async_research",
+    "estimate_complexity",
+    "generate_plan",
     "get_language",
     "list_languages",
     "research",

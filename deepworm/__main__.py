@@ -287,6 +287,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show detailed research metrics after completion",
     )
+    parser.add_argument(
+        "--plan",
+        action="store_true",
+        help="Show research plan before executing (topic analysis & sub-questions)",
+    )
+    parser.add_argument(
+        "--plan-only",
+        action="store_true",
+        help="Generate and show research plan without executing research",
+    )
     return parser
 
 
@@ -577,6 +587,38 @@ def main(args: list[str] | None = None) -> None:
             console.print("[red]No topic provided.[/red]")
             return
         opts.topic = topic.strip()
+
+    # Research planning
+    if getattr(opts, "plan", False) or getattr(opts, "plan_only", False):
+        from .planner import generate_plan, estimate_complexity
+
+        console.print("[bold cyan]Analyzing topic...[/bold cyan]")
+        try:
+            from .llm import get_client
+            llm = get_client(config)
+            plan = generate_plan(opts.topic, llm)
+        except Exception:
+            from .planner import _fallback_plan
+            plan = _fallback_plan(opts.topic)
+
+        from rich.panel import Panel
+        from rich.markdown import Markdown
+        console.print(Panel(
+            Markdown(plan.to_markdown()),
+            title="[bold]Research Plan[/bold]",
+            border_style="cyan",
+        ))
+
+        if opts.plan_only:
+            return
+
+        # Apply suggested settings if user hasn't overridden
+        if config.depth == 2 and plan.suggested_depth != 2:
+            config = Config(**{**config.__dict__, "depth": plan.suggested_depth})
+            console.print(f"[dim]Adjusted depth to {plan.suggested_depth} based on plan[/dim]")
+        if config.breadth == 4 and plan.suggested_breadth != 4:
+            config = Config(**{**config.__dict__, "breadth": plan.suggested_breadth})
+            console.print(f"[dim]Adjusted breadth to {plan.suggested_breadth} based on plan[/dim]")
 
     # Run research
     researcher = DeepResearcher(config=config, cache=cache)
