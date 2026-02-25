@@ -12,6 +12,8 @@ import os
 import time
 from typing import Any, Optional
 
+from dataclasses import dataclass, field
+
 from .config import Config
 from .exceptions import APIKeyError, ModelNotFoundError, ProviderError, RateLimitError
 
@@ -19,6 +21,74 @@ logger = logging.getLogger("deepworm")
 
 MAX_RETRIES = 3
 RETRY_BASE_DELAY = 1.0  # seconds
+
+# Approximate cost per million tokens (USD) — updated 2025
+_MODEL_COSTS: dict[str, tuple[float, float]] = {
+    # (input_cost_per_M, output_cost_per_M)
+    "gpt-4o": (2.50, 10.00),
+    "gpt-4o-mini": (0.15, 0.60),
+    "gpt-4-turbo": (10.00, 30.00),
+    "gpt-3.5-turbo": (0.50, 1.50),
+    "claude-sonnet-4-20250514": (3.00, 15.00),
+    "claude-3-5-sonnet-20241022": (3.00, 15.00),
+    "claude-3-haiku-20240307": (0.25, 1.25),
+    "claude-3-opus-20240229": (15.00, 75.00),
+    "gemini-2.5-flash": (0.00, 0.00),  # free tier
+    "gemini-2.5-pro": (0.00, 0.00),
+    "gemini-2.0-flash": (0.00, 0.00),
+    "gemini-2.0-flash-lite": (0.00, 0.00),
+    "gemini-3-flash-preview": (0.00, 0.00),
+}
+
+
+@dataclass
+class TokenUsage:
+    """Token usage for a single LLM call."""
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_tokens: int = 0
+    model: str = ""
+    estimated_cost_usd: float = 0.0
+
+
+@dataclass
+class TokenTracker:
+    """Accumulates token usage across multiple LLM calls."""
+    calls: list[TokenUsage] = field(default_factory=list)
+    total_prompt_tokens: int = 0
+    total_completion_tokens: int = 0
+    total_tokens: int = 0
+    total_cost_usd: float = 0.0
+
+    def record(self, usage: TokenUsage) -> None:
+        self.calls.append(usage)
+        self.total_prompt_tokens += usage.prompt_tokens
+        self.total_completion_tokens += usage.completion_tokens
+        self.total_tokens += usage.total_tokens
+        self.total_cost_usd += usage.estimated_cost_usd
+
+    @property
+    def call_count(self) -> int:
+        return len(self.calls)
+
+    def summary(self) -> str:
+        parts = [f"{self.total_tokens:,} tokens ({self.call_count} calls)"]
+        if self.total_cost_usd > 0:
+            parts.append(f"~${self.total_cost_usd:.4f}")
+        return " · ".join(parts)
+
+
+def _estimate_cost(model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    """Estimate cost in USD for a given model and token counts."""
+    for model_key, (inp_cost, out_cost) in _MODEL_COSTS.items():
+        if model_key in model:
+            return (prompt_tokens * inp_cost + completion_tokens * out_cost) / 1_000_000
+    return 0.0
+
+
+def _estimate_tokens(text: str) -> int:
+    """Rough token estimate: ~4 chars per token."""
+    return max(1, len(text) // 4)
 
 
 def get_client(config: Config) -> "LLMClient":
@@ -72,6 +142,25 @@ def get_client(config: Config) -> "LLMClient":
 
 class LLMClient:
     """Base class for LLM clients."""
+
+    def __init__(self):
+        self.token_tracker = TokenTracker()
+        self.last_usage: Optional[TokenUsage] = None
+
+    def _record_usage(self, prompt_tokens: int, completion_tokens: int, model: str = "") -> TokenUsage:
+        """Record token usage from an API call."""
+        total = prompt_tokens + completion_tokens
+        cost = _estimate_cost(model or getattr(self, 'model', ''), prompt_tokens, completion_tokens)
+        usage = TokenUsage(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=total,
+            model=model or getattr(self, 'model', ''),
+            estimated_cost_usd=cost,
+        )
+        self.token_tracker.record(usage)
+        self.last_usage = usage
+        return usage
 
     def chat(self, messages: list[dict[str, str]], temperature: float = 0.3) -> str:
         raise NotImplementedError
@@ -127,6 +216,7 @@ class OpenAICompatibleClient(LLMClient):
     """Client for OpenAI and Ollama (OpenAI-compatible API)."""
 
     def __init__(self, api_key: str, base_url: str, model: str):
+        super().__init__()
         from openai import OpenAI
         self.client = OpenAI(api_key=api_key, base_url=base_url)
         self.model = model
@@ -137,6 +227,22 @@ class OpenAICompatibleClient(LLMClient):
             messages=messages,
             temperature=temperature,
         )
+        # Track token usage from API response
+        if resp.usage:
+            self._record_usage(
+                prompt_tokens=resp.usage.prompt_tokens or 0,
+                completion_tokens=resp.usage.completion_tokens or 0,
+                model=self.model,
+            )
+        else:
+            # Estimate tokens if API doesn't report
+            prompt_text = " ".join(m.get("content", "") for m in messages)
+            result_text = resp.choices[0].message.content or ""
+            self._record_usage(
+                prompt_tokens=_estimate_tokens(prompt_text),
+                completion_tokens=_estimate_tokens(result_text),
+                model=self.model,
+            )
         return resp.choices[0].message.content or ""
 
     def stream(self, messages: list[dict[str, str]], temperature: float = 0.3):
@@ -156,6 +262,7 @@ class AnthropicClient(LLMClient):
     """Client for Anthropic Claude."""
 
     def __init__(self, api_key: str, model: str):
+        super().__init__()
         import anthropic
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model = model
@@ -180,6 +287,13 @@ class AnthropicClient(LLMClient):
             kwargs["system"] = system_msg
 
         resp = self.client.messages.create(**kwargs)
+        # Track token usage from Anthropic response
+        if hasattr(resp, 'usage') and resp.usage:
+            self._record_usage(
+                prompt_tokens=getattr(resp.usage, 'input_tokens', 0),
+                completion_tokens=getattr(resp.usage, 'output_tokens', 0),
+                model=self.model,
+            )
         return resp.content[0].text
 
     def stream(self, messages: list[dict[str, str]], temperature: float = 0.3):
@@ -210,10 +324,12 @@ class GoogleClient(LLMClient):
     """Client for Google Gemini."""
 
     def __init__(self, api_key: str, model: str):
+        super().__init__()
         import google.generativeai as genai
         genai.configure(api_key=api_key)
         self.genai = genai
         self.model_name = model
+        self.model = model  # for base class access
 
     def chat(self, messages: list[dict[str, str]], temperature: float = 0.3) -> str:
         model = self.genai.GenerativeModel(self.model_name)
@@ -223,8 +339,25 @@ class GoogleClient(LLMClient):
         for m in messages:
             parts.append(m["content"])
 
+        prompt_text = "\n\n".join(parts)
         resp = model.generate_content(
-            "\n\n".join(parts),
+            prompt_text,
             generation_config={"temperature": temperature},
         )
-        return resp.text
+        result_text = resp.text
+        # Track token usage — Gemini API may provide usage_metadata
+        if hasattr(resp, 'usage_metadata') and resp.usage_metadata:
+            um = resp.usage_metadata
+            self._record_usage(
+                prompt_tokens=getattr(um, 'prompt_token_count', 0) or 0,
+                completion_tokens=getattr(um, 'candidates_token_count', 0) or 0,
+                model=self.model_name,
+            )
+        else:
+            # Estimate tokens
+            self._record_usage(
+                prompt_tokens=_estimate_tokens(prompt_text),
+                completion_tokens=_estimate_tokens(result_text),
+                model=self.model_name,
+            )
+        return result_text

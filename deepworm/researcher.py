@@ -22,9 +22,10 @@ from typing import Callable, Optional
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 from .config import Config
-from .llm import LLMClient, get_client
+from .llm import LLMClient, TokenTracker, get_client
 from .cache import Cache, get_cache
 from .events import Event, EventEmitter, EventType
 from .history import add_entry as _add_history
@@ -237,7 +238,8 @@ class DeepResearcher:
             )
             if persona:
                 info += f"\nPersona: {persona}"
-            console.print(Panel(info, title="deepworm research", border_style="blue"))
+            console.print(Panel(info, title="[bold]deepworm[/bold] research", border_style="blue"))
+            console.print()
 
         t_start = time.time()
         self._session_start = t_start
@@ -289,6 +291,13 @@ class DeepResearcher:
                 console.print(f"[dim]Generated {len(queries)} search queries[/dim]")
                 for q in queries:
                     console.print(f"  [dim]• {q}[/dim]")
+                # Show token usage after query generation
+                tracker = llm.token_tracker
+                console.print(
+                    f"  [blue]⟡ Tokens: {tracker.total_tokens:,} "
+                    f"(in:{tracker.total_prompt_tokens:,} out:{tracker.total_completion_tokens:,}) "
+                    f"| {tracker.call_count} API calls[/blue]"
+                )
 
             # Search and fetch
             with self._metrics.time("search"):
@@ -333,6 +342,12 @@ class DeepResearcher:
             if verbose:
                 total_elapsed = time.time() - t_start
                 remaining = self.config.depth - (i + 1)
+                tracker = llm.token_tracker
+                token_info = (
+                    f"[blue]⟡ Tokens: {tracker.total_tokens:,} "
+                    f"(in:{tracker.total_prompt_tokens:,} out:{tracker.total_completion_tokens:,}) "
+                    f"| {tracker.call_count} API calls[/blue]"
+                )
                 if remaining > 0 and (i + 1) > 0:
                     avg_iter = total_elapsed / (i + 1)
                     eta = avg_iter * remaining + avg_iter * 0.5  # +synthesis estimate
@@ -342,6 +357,7 @@ class DeepResearcher:
                     )
                 else:
                     console.print(f"[dim]Iteration completed in {elapsed:.1f}s[/dim]")
+                console.print(f"  {token_info}")
 
             # Auto-save session state after each iteration
             self._save_state(state)
@@ -419,10 +435,26 @@ class DeepResearcher:
         ))
 
         if verbose:
-            console.print(f"[bold green]Done![/bold green] [dim]({total_time:.1f}s total, {len(state.sources)} sources)[/dim]\n")
+            tracker = llm.token_tracker
+            console.print()
+            # Final summary table
+            summary_table = Table(show_header=False, box=None, padding=(0, 2))
+            summary_table.add_column(style="bold")
+            summary_table.add_column()
+            summary_table.add_row("Time", f"{total_time:.1f}s")
+            summary_table.add_row("Sources", f"{len(state.sources)}")
+            summary_table.add_row("API Calls", f"{tracker.call_count}")
+            summary_table.add_row("Tokens", f"{tracker.total_tokens:,}")
+            summary_table.add_row("  Input", f"{tracker.total_prompt_tokens:,}")
+            summary_table.add_row("  Output", f"{tracker.total_completion_tokens:,}")
+            if tracker.total_cost_usd > 0:
+                summary_table.add_row("Est. Cost", f"${tracker.total_cost_usd:.4f}")
+            console.print(Panel(summary_table, title="[bold green]✓ Research Complete[/bold green]", border_style="green"))
+            console.print()
 
         # Store sources for post-research access (e.g., source export)
         self.last_sources = state.sources
+        self.last_token_tracker = llm.token_tracker
 
         # Finalize metrics
         self.last_metrics = self._metrics.finalize()

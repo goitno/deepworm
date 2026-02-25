@@ -1,0 +1,23 @@
+Readability: Very Difficult (Flesch 22)
+Grade: College | Fog: 15.4 | Words: 98 | Vocab: 77%
+
+Compliance: PASS (100/100)
+Errors: 0 | Warnings: 0
+  [info] Passive voice detected
+  [info] Passive voice detected
+
+Quality: C (57%)
+  Structure: 80%
+  Depth: 25%
+  Sources: 50%
+  Readability: 65%
+  Complete: 90%
+
+  > Include more specific data, statistics, and examples
+  > Cite more sources and include diverse references
+
+Annotations: 4 findings
+  [warning] Vague language detected — consider citing specific sources -> Many experts believe it will significantly impact the field 
+  [warning] Vague language detected — consider citing specific sources -> Some research indicates approximately 65% adoption rate in c
+  [fact_check] Statistic without citation -> Some research indicates approximately 65% adoption rate in c
+  [warning] Vague language detected — consider citing specific sources -> It is generally accepted that more research is needed in thi

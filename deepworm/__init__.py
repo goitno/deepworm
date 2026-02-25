@@ -42,6 +42,7 @@ from .http_middleware import MiddlewarePhase, RequestMethod, Request, Response, 
 from .i18n import TranslationEntry, TranslationCatalog, LanguageDetection, detect_language, extract_translatable, create_catalog, merge_catalogs
 from .keywords import Keyword, KeywordResult, extract_keywords, extract_tags
 from .languages import Language, get_language, list_languages
+from .llm import TokenTracker, TokenUsage
 from .notion import NotionBlock, NotionPage, export_notion_json, markdown_to_notion
 from .outline import OutlineSection, ReportOutline, generate_outline, outline_from_report
 from .planner import ResearchPlan, generate_plan, estimate_complexity
@@ -258,7 +259,9 @@ __all__ = [
     "TocEntry",
     "Token",
     "TokenBucket",
+    "TokenTracker",
     "TokenType",
+    "TokenUsage",
     "ToneAnalysis",
     "TransformChain",
     "TransformChainResult",

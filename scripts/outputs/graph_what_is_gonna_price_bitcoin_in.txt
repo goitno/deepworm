@@ -1,0 +1,99 @@
+============================================================
+  DEEPWORM --graph DEMO
+============================================================
+
+[STATS]
+  Nodes:      17
+  Edges:      15
+  Components: 2
+  Density:    0.055
+  Avg Degree: 1.8
+
+[TOP CONNECTED NODES]
+  Research: what is gonna price bitcoin in 2027 [section] degree=5
+  Background                                    [section] degree=3
+  Key Findings                                  [section] degree=3
+  Sources                                       [section] degree=3
+  Early Development                             [section] degree=2
+  Modern Era                                    [section] degree=2
+  Finding 1: Performance                        [section] degree=2
+  Finding 2: Adoption                           [section] degree=2
+  Introduction                                  [section] degree=1
+  Conclusion                                    [section] degree=1
+
+[MERMAID DIAGRAM]
+```mermaid
+graph TD
+    research-what-is-gonna-price-bitcoin-in-2027["Research: what is gonna price bitcoin in 2027"]
+    introduction["Introduction"]
+    background["Background"]
+    early-development["Early Development"]
+    modern-era["Modern Era"]
+    key-findings["Key Findings"]
+    finding-1-performance["Finding 1: Performance"]
+    finding-2-adoption["Finding 2: Adoption"]
+    conclusion["Conclusion"]
+    sources["Sources"]
+    document["document"]
+    https---example.com-paper1["Original Paper"]
+    https---example.com-survey2["Modern Survey"]
+    https---example.com-bench["Benchmark"]
+    https---example.com-adoption["Report"]
+    https---example.com-a["Source A"]
+    https---example.com-b["Source B"]
+    research-what-is-gonna-price-bitcoin-in-2027 -->|parent_of| introduction
+    research-what-is-gonna-price-bitcoin-in-2027 -->|parent_of| background
+    background -->|parent_of| early-development
+    background -->|parent_of| modern-era
+    research-what-is-gonna-price-bitcoin-in-2027 -->|parent_of| key-findings
+    key-findings -->|parent_of| finding-1-performance
+    key-findings -->|parent_of| finding-2-adoption
+    research-what-is-gonna-price-bitcoin-in-2027 -->|parent_of| conclusion
+    research-what-is-gonna-price-bitcoin-in-2027 -->|parent_of| sources
+    early-development -->|Original Paper| https---example.com-paper1
+    modern-era -->|Modern Survey| https---example.com-survey2
+    finding-1-performance -->|Benchmark| https---example.com-bench
+    finding-2-adoption -->|Report| https---example.com-adoption
+    sources -->|Source A| https---example.com-a
+    sources -->|Source B| https---example.com-b
+```
+
+[DOT FORMAT]
+digraph "what_is_gonna_price_bitcoin_in" {
+    "research-what-is-gonna-price-bitcoin-in-2027" [label="Research: what is gonna price bitcoin in 2027"];
+    "introduction" [label="Introduction"];
+    "background" [label="Background"];
+    "early-development" [label="Early Development"];
+    "modern-era" [label="Modern Era"];
+    "key-findings" [label="Key Findings"];
+    "finding-1-performance" [label="Finding 1: Performance"];
+    "finding-2-adoption" [label="Finding 2: Adoption"];
+    "conclusion" [label="Conclusion"];
+    "sources" [label="Sources"];
+    "document" [label="document"];
+    "https---example.com-paper1" [label="Original Paper"];
+    "https---example.com-survey2" [label="Modern Survey"];
+    "https---example.com-bench" [label="Benchmark"];
+    "https---example.com-adoption" [label="Report"];
+    "https---example.com-a" [label="Source A"];
+    "https---example.com-b" [label="Source B"];
+    "research-what-is-gonna-price-bitcoin-in-2027" -> "introduction" [label="parent_of"];
+    "research-what-is-gonna-price-bitcoin-in-2027" -> "background" [label="parent_of"];
+    "background" -> "early-development" [label="parent_of"];
+    "background" -> "modern-era" [label="parent_of"];
+    "research-what-is-gonna-price-bitcoin-in-2027" -> "key-findings" [label="parent_of"];
+    "key-findings" -> "finding-1-performance" [label="parent_of"];
+    "key-findings" -> "finding-2-adoption" [label="parent_of"];
+    "research-what-is-gonna-price-bitcoin-in-2027" -> "conclusion" [label="parent_of"];
+    "research-what-is-gonna-price-bitcoin-in-2027" -> "sources" [label="parent_of"];
+    "early-development" -> "https---example.com-paper1" [label="Original Paper"];
+    "modern-era" -> "https---example.com-survey2" [label="Modern Survey"];
+    "finding-1-performance" -> "https---example.com-bench" [label="Benchmark"];
+    "finding-2-adoption" -> "https---example.com-adoption" [label="Report"];
+    "sources" -> "https---example.com-a" [label="Source A"];
+    "sources" -> "https---example.com-b" [label="Source B"];
+}
+
+============================================================
+  Knowledge graph: 17 nodes, 15 edges
+============================================================

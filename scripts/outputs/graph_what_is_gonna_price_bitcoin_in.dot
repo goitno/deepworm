@@ -1,0 +1,34 @@
+digraph "what_is_gonna_price_bitcoin_in" {
+    "research-what-is-gonna-price-bitcoin-in-2027" [label="Research: what is gonna price bitcoin in 2027"];
+    "introduction" [label="Introduction"];
+    "background" [label="Background"];
+    "early-development" [label="Early Development"];
+    "modern-era" [label="Modern Era"];
+    "key-findings" [label="Key Findings"];
+    "finding-1-performance" [label="Finding 1: Performance"];
+    "finding-2-adoption" [label="Finding 2: Adoption"];
+    "conclusion" [label="Conclusion"];
+    "sources" [label="Sources"];
+    "document" [label="document"];
+    "https---example.com-paper1" [label="Original Paper"];
+    "https---example.com-survey2" [label="Modern Survey"];
+    "https---example.com-bench" [label="Benchmark"];
+    "https---example.com-adoption" [label="Report"];
+    "https---example.com-a" [label="Source A"];
+    "https---example.com-b" [label="Source B"];
+    "research-what-is-gonna-price-bitcoin-in-2027" -> "introduction" [label="parent_of"];
+    "research-what-is-gonna-price-bitcoin-in-2027" -> "background" [label="parent_of"];
+    "background" -> "early-development" [label="parent_of"];
+    "background" -> "modern-era" [label="parent_of"];
+    "research-what-is-gonna-price-bitcoin-in-2027" -> "key-findings" [label="parent_of"];
+    "key-findings" -> "finding-1-performance" [label="parent_of"];
+    "key-findings" -> "finding-2-adoption" [label="parent_of"];
+    "research-what-is-gonna-price-bitcoin-in-2027" -> "conclusion" [label="parent_of"];
+    "research-what-is-gonna-price-bitcoin-in-2027" -> "sources" [label="parent_of"];
+    "early-development" -> "https---example.com-paper1" [label="Original Paper"];
+    "modern-era" -> "https---example.com-survey2" [label="Modern Survey"];
+    "finding-1-performance" -> "https---example.com-bench" [label="Benchmark"];
+    "finding-2-adoption" -> "https---example.com-adoption" [label="Report"];
+    "sources" -> "https---example.com-a" [label="Source A"];
+    "sources" -> "https---example.com-b" [label="Source B"];
+}

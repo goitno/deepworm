@@ -9,6 +9,8 @@ import os
 import sys
 
 from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 from . import __version__
 from .config import Config
@@ -748,96 +750,118 @@ def main(args: list[str] | None = None) -> None:
         from .scoring import score_report as _score_polish
         from .annotations import auto_annotate, annotate_report
 
-        console.print("\n[bold cyan]── Polish Pipeline ──[/bold cyan]\n")
+        console.print()
+        console.print(Panel("[bold]Polish Pipeline[/bold]", border_style="cyan", expand=False))
+        console.print()
 
         # Step 1: Readability
         ra = analyze_readability(report)
-        console.print(f"[bold]1. Readability[/bold]  {ra.reading_level} (Flesch {ra.flesch_reading_ease:.0f})")
+        r_color = "green" if ra.flesch_reading_ease >= 60 else ("yellow" if ra.flesch_reading_ease >= 30 else "red")
+        console.print(f"  [bold]1.[/bold] Readability   [{r_color}]{ra.reading_level}[/{r_color}] (Flesch {ra.flesch_reading_ease:.0f})")
         console.print(
-            f"   Grade: {ra.grade_level} | "
-            f"Fog: {ra.gunning_fog:.1f} | "
-            f"Words: {ra.total_words:,} | "
-            f"Vocab richness: {ra.vocabulary_richness:.0%}"
+            f"     Grade: {ra.grade_level} │ "
+            f"Fog: {ra.gunning_fog:.1f} │ "
+            f"Words: {ra.total_words:,} │ "
+            f"Vocab: {ra.vocabulary_richness:.0%}"
         )
 
         # Step 2: Compliance
         cr = check_compliance(report)
-        status = "[green]PASS[/green]" if cr.is_compliant else "[red]FAIL[/red]"
-        console.print(f"\n[bold]2. Compliance[/bold]  {status} ({cr.score:.0f}/100)")
+        status = "[green]✓ PASS[/green]" if cr.is_compliant else "[red]✗ FAIL[/red]"
+        console.print(f"\n  [bold]2.[/bold] Compliance   {status} ({cr.score:.0f}/100)")
         if cr.issues:
             errors = cr.error_count
             warnings = cr.warning_count
             info = len(cr.issues) - errors - warnings
             console.print(
-                f"   [red]{errors} errors[/red] · "
-                f"[yellow]{warnings} warnings[/yellow] · "
+                f"     [red]{errors} errors[/red] │ "
+                f"[yellow]{warnings} warnings[/yellow] │ "
                 f"[dim]{info} info[/dim]"
             )
-            # Show top 5 issues
             for issue in cr.issues[:5]:
                 sev_color = {"error": "red", "warning": "yellow", "info": "dim", "suggestion": "cyan"}
                 color = sev_color.get(issue.severity.value, "dim")
-                console.print(f"   [{color}]• {issue.message}[/{color}]")
+                console.print(f"     [{color}]• {issue.message}[/{color}]")
             if len(cr.issues) > 5:
-                console.print(f"   [dim]... and {len(cr.issues) - 5} more[/dim]")
+                console.print(f"     [dim]… +{len(cr.issues) - 5} more[/dim]")
 
         # Step 3: Quality Score
         qs_polish = _score_polish(report)
-        console.print(f"\n[bold]3. Quality Score[/bold]  {qs_polish.grade} ({qs_polish.overall:.0%})")
-        console.print(
-            f"   Structure {qs_polish.structure:.0%} · "
-            f"Depth {qs_polish.depth:.0%} · "
-            f"Sources {qs_polish.sources:.0%} · "
-            f"Readability {qs_polish.readability:.0%} · "
-            f"Completeness {qs_polish.completeness:.0%}"
-        )
+        grade_color = "green" if qs_polish.overall >= 0.8 else ("yellow" if qs_polish.overall >= 0.6 else "red")
+        console.print(f"\n  [bold]3.[/bold] Quality      [{grade_color}]{qs_polish.grade}[/{grade_color}] ({qs_polish.overall:.0%})")
+
+        # Quality dimensions as a mini bar chart
+        dims = [
+            ("Structure", qs_polish.structure),
+            ("Depth", qs_polish.depth),
+            ("Sources", qs_polish.sources),
+            ("Readability", qs_polish.readability),
+            ("Complete", qs_polish.completeness),
+        ]
+        for name, val in dims:
+            bar_len = int(val * 20)
+            bar = "█" * bar_len + "░" * (20 - bar_len)
+            bar_color = "green" if val >= 0.8 else ("yellow" if val >= 0.6 else "red")
+            console.print(f"     {name:<12} [{bar_color}]{bar}[/{bar_color}] {val:.0%}")
 
         # Step 4: Auto-annotations
         anns = auto_annotate(report)
         ann_count = len(anns.annotations)
         if ann_count > 0:
-            console.print(f"\n[bold]4. Annotations[/bold]  {ann_count} findings")
+            console.print(f"\n  [bold]4.[/bold] Annotations  [yellow]{ann_count} findings[/yellow]")
             from collections import Counter
             type_counts = Counter(a.annotation_type.value for a in anns.annotations)
             parts = [f"{v} {k}" for k, v in type_counts.most_common()]
-            console.print(f"   {' · '.join(parts)}")
+            console.print(f"     {' │ '.join(parts)}")
             for a in anns.annotations[:5]:
                 type_color = {
                     "fact_check": "red", "warning": "yellow",
                     "question": "cyan", "todo": "magenta",
                 }
                 color = type_color.get(a.annotation_type.value, "dim")
-                target = f" → {a.target[:50]}..." if a.target and len(a.target) > 50 else (f" → {a.target}" if a.target else "")
-                console.print(f"   [{color}]• [{a.annotation_type.value}] {a.text}{target}[/{color}]")
+                target = f" → {a.target[:50]}…" if a.target and len(a.target) > 50 else (f" → {a.target}" if a.target else "")
+                console.print(f"     [{color}]• [{a.annotation_type.value}] {a.text}{target}[/{color}]")
             if ann_count > 5:
-                console.print(f"   [dim]... and {ann_count - 5} more[/dim]")
+                console.print(f"     [dim]… +{ann_count - 5} more[/dim]")
         else:
-            console.print(f"\n[bold]4. Annotations[/bold]  [green]No issues found[/green]")
+            console.print(f"\n  [bold]4.[/bold] Annotations  [green]✓ No issues[/green]")
 
-        # Summary
-        console.print(f"\n[bold cyan]── Summary ──[/bold cyan]")
-        console.print(
-            f"   Quality: {qs_polish.grade} | "
-            f"Compliance: {'PASS' if cr.is_compliant else 'FAIL'} | "
-            f"Readability: {ra.reading_level} | "
-            f"Annotations: {ann_count}"
-        )
+        # Summary panel
+        summary_tbl = Table(show_header=False, box=None, padding=(0, 2))
+        summary_tbl.add_column(style="bold")
+        summary_tbl.add_column()
+        summary_tbl.add_row("Quality", f"{qs_polish.grade} ({qs_polish.overall:.0%})")
+        summary_tbl.add_row("Compliance", f"{'PASS' if cr.is_compliant else 'FAIL'} ({cr.score:.0f}/100)")
+        summary_tbl.add_row("Readability", f"{ra.reading_level} (Flesch {ra.flesch_reading_ease:.0f})")
+        summary_tbl.add_row("Annotations", f"{ann_count} findings")
+        console.print()
+        console.print(Panel(summary_tbl, title="[bold cyan]Summary[/bold cyan]", border_style="cyan", expand=False))
 
     # Knowledge graph extraction
     if getattr(opts, "graph", None) is not None:
         from .graph import extract_concept_graph, extract_link_graph, merge_graphs
 
-        console.print("\n[bold cyan]── Knowledge Graph ──[/bold cyan]\n")
+        console.print()
+        console.print(Panel("[bold]Knowledge Graph[/bold]", border_style="cyan", expand=False))
+        console.print()
+
         concept_g = extract_concept_graph(report)
         link_g = extract_link_graph(report)
         graph = merge_graphs(concept_g, link_g)
         graph.name = opts.topic or "research"
 
         gs = graph.stats()
-        console.print(
-            f"  Nodes: {gs.node_count} | Edges: {gs.edge_count} | "
-            f"Components: {gs.components} | Density: {gs.density:.3f}"
-        )
+
+        # Stats table
+        stats_tbl = Table(show_header=False, box=None, padding=(0, 2))
+        stats_tbl.add_column(style="bold")
+        stats_tbl.add_column()
+        stats_tbl.add_row("Nodes", f"{gs.node_count}")
+        stats_tbl.add_row("Edges", f"{gs.edge_count}")
+        stats_tbl.add_row("Components", f"{gs.components}")
+        stats_tbl.add_row("Density", f"{gs.density:.3f}")
+        stats_tbl.add_row("Avg Degree", f"{gs.avg_degree:.1f}")
+        console.print(stats_tbl)
 
         fmt = opts.graph
         if fmt == "mermaid":
@@ -852,15 +876,19 @@ def main(args: list[str] | None = None) -> None:
             import json as _json
             print(_json.dumps(graph.to_dict(), indent=2))
         elif fmt == "stats":
-            # Detailed stats with top nodes
-            console.print(f"  Avg Degree: {gs.avg_degree:.1f}")
+            # Show nodes sorted by degree (most connected first)
             if graph.nodes:
-                # Show nodes sorted by degree (most connected first)
+                console.print(f"\n  [bold]Top connected nodes:[/bold]")
                 node_degrees = [(n, graph.degree(n.node_id)) for n in graph.nodes]
                 node_degrees.sort(key=lambda x: x[1], reverse=True)
-                console.print(f"\n  [bold]Top connected nodes:[/bold]")
+                top_tbl = Table(show_header=True, header_style="bold", padding=(0, 1))
+                top_tbl.add_column("Node", style="cyan")
+                top_tbl.add_column("Type", style="dim")
+                top_tbl.add_column("Degree", justify="right")
                 for node, deg in node_degrees[:10]:
-                    console.print(f"    {node.label} [{node.node_type}] — degree {deg}")
+                    bar = "█" * deg
+                    top_tbl.add_row(node.label[:40], node.node_type, f"{deg} {bar}")
+                console.print(top_tbl)
 
         # Save graph to file if --output is specified
         if opts.output and fmt in ("mermaid", "dot"):
@@ -868,7 +896,7 @@ def main(args: list[str] | None = None) -> None:
             graph_path = opts.output.rsplit(".", 1)[0] + ext if "." in opts.output else opts.output + ext
             with open(graph_path, "w", encoding="utf-8") as f:
                 f.write(output)
-            console.print(f"\n[green]Graph saved to {graph_path}[/green]")
+            console.print(f"\n[green]✓ Graph saved to {graph_path}[/green]")
 
     # Show research metrics if requested
     if opts.metrics:
@@ -889,6 +917,17 @@ def main(args: list[str] | None = None) -> None:
                 console.print(f"  Retries:         {m.retries}")
             if m.errors > 0:
                 console.print(f"  Errors:          {m.errors}")
+
+        # Token usage from LLM client
+        tracker = getattr(researcher, "last_token_tracker", None)
+        if tracker and tracker.call_count > 0:
+            console.print(f"\n[bold]Token Usage[/bold]")
+            console.print(f"  API calls:       {tracker.call_count}")
+            console.print(f"  Input tokens:    {tracker.total_prompt_tokens:,}")
+            console.print(f"  Output tokens:   {tracker.total_completion_tokens:,}")
+            console.print(f"  Total tokens:    {tracker.total_tokens:,}")
+            if tracker.total_cost_usd > 0:
+                console.print(f"  Est. cost:       ${tracker.total_cost_usd:.4f}")
 
     # Export sources if requested
     if opts.export_sources:
