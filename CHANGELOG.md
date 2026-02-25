@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-02-25
+
+### Added
+
+- **Text Transform** (`transform.py`): Comprehensive text transformation utilities. `TransformType` enum (case/whitespace/markdown/replace/structure/custom). `TransformResult` with change tracking and diff_ratio. Case transforms: `to_title_case()` with small-word awareness, `to_sentence_case()`. Whitespace: `normalize_whitespace()` (collapse blank lines), `fix_indentation()`. Markdown: `normalize_headings()`, `strip_html()`, `normalize_links()`, `strip_comments()`. Search/replace: `find_replace()` with regex and case-insensitive support, `find_replace_batch()`. Structure: `wrap_text()`, `extract_section()`, `remove_section()`, `reorder_sections()`. `TransformChain` for composable multi-step transforms. `cleanup_transform()` preset chain.
+- **Audit Trail** (`audit.py`): Change tracking and audit logging for document operations. `AuditAction` enum (10 actions: create, update, delete, read, export, validate, approve, reject, archive, restore). `AuditLevel` enum (debug, info, warning, error, critical). `AuditEntry` with SHA-256 checksum, UUID entry_id, ISO timestamps. `AuditPolicy` with configurable actor/detail requirements, max entries, min level. `AuditReport` with markdown output, grouping by action/actor/level. `AuditLog` with query filters, listeners, export (JSON/text). `strict_audit_policy()` and `minimal_audit_policy()` presets.
+- **Markdown Formatter** (`formatter.py`): Advanced markdown formatting and normalization. `ListStyle` (dash/asterisk/plus), `EmphasisStyle`, `TableAlignment` (left/center/right). `FormatOptions` for configurable formatting. `normalize_lists()`, `sort_list()`, `format_table()` with column alignment. `normalize_emphasis()` (asterisk/underscore conversion). `normalize_code_fences()`, `add_language_labels()` with open/close tracking. `normalize_blockquotes()`, `add_heading_ids()` with slug generation. `ensure_blank_lines_around_headings()`, `format_document()` full pipeline. `create_format_options()`.
+- **Knowledge Graph** (`graph.py`): Document relationship analysis and knowledge graph construction. `EdgeType` enum (10 types: references, contains, related_to, depends_on, parent_of, child_of, cites, similar_to, precedes, follows). `Node` and `Edge` data structures with metadata. `KnowledgeGraph` with add/remove nodes and edges, filtering. Path finding: `has_path()`, `shortest_path()` (BFS). Analysis: `connected_components()`, `topological_sort()` (with cycle detection). `subgraph()` extraction, `stats()` (density, components, avg_degree). Export: `to_dict()`, `to_mermaid()`, `to_dot()` (Graphviz). Helpers: `extract_concept_graph()` from headings, `extract_link_graph()` from markdown links. `create_graph()`, `merge_graphs()` with node deduplication.
+- **New Exports**: 55 new public API exports. Total public API: 226 exports.
+
 ## [1.1.0] - 2025-02-25
 
 ### Added

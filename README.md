@@ -523,7 +523,11 @@ tracker.complete()
 | Internationalization | 12 languages, PO/JSON export, catalogs | No |
 | Document schemas | Field validation, JSON Schema export | No |
 | Pipeline hooks | 10 lifecycle stages, middleware, pipelines | No |
-| Lines of code | ~22,000 | ~10,000+ |
+| Text transforms | Case, whitespace, structure transforms | No |
+| Audit trail | Action logging, SHA-256 checksums, policies | No |
+| Markdown formatter | List/table/emphasis normalization, heading IDs | No |
+| Knowledge graph | Relationship analysis, BFS, Mermaid/Graphviz | No |
+| Lines of code | ~27,000 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -602,6 +606,10 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Internationalization** — detect 12 languages, translation catalogs, PO/JSON export
 - **Document schemas** — field validation, section rules, JSON Schema export
 - **Pipeline hooks** — 10 lifecycle stages, priority ordering, middleware, pipelines
+- **Text transforms** — case conversion, whitespace normalization, section reordering, composable chains
+- **Audit trail** — action logging with SHA-256 checksums, UUID entries, configurable policies
+- **Markdown formatter** — list/table/emphasis normalization, heading IDs, language labels
+- **Knowledge graph** — document relationship analysis, BFS path finding, Mermaid/Graphviz export
 
 ## License
 
