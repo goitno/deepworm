@@ -74,7 +74,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--format", "-f",
         type=str,
-        choices=["markdown", "html", "text", "json"],
+        choices=["markdown", "html", "text", "json", "pdf"],
         default=None,
         help="Output format when saving to file (auto-detected from extension)",
     )
@@ -309,7 +309,7 @@ def _output_report(report: str, opts: argparse.Namespace) -> None:
         # Auto-detect format from extension if not specified
         fmt = opts.format
         if fmt is None:
-            ext_map = {".html": "html", ".htm": "html", ".txt": "text", ".json": "json"}
+            ext_map = {".html": "html", ".htm": "html", ".txt": "text", ".json": "json", ".pdf": "pdf"}
             ext = os.path.splitext(opts.output)[1].lower()
             fmt = ext_map.get(ext, "markdown")
         path = save_report(report, opts.output, topic=topic, fmt=fmt)

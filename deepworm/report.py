@@ -30,11 +30,14 @@ def save_report(
 ) -> str:
     """Save a report to a file. Returns the path used.
 
-    Formats: markdown (default), text, json, html
+    Formats: markdown (default), text, json, html, pdf
     """
     if path is None:
         slug = _slugify(topic) if topic else "research"
-        ext = {"markdown": ".md", "text": ".txt", "json": ".json", "html": ".html"}.get(fmt, ".md")
+        ext = {
+            "markdown": ".md", "text": ".txt", "json": ".json",
+            "html": ".html", "pdf": ".pdf",
+        }.get(fmt, ".md")
         path = f"{slug}{ext}"
 
     filepath = Path(path)
@@ -49,6 +52,8 @@ def save_report(
     elif fmt == "html":
         html = markdown_to_html(report, topic=topic)
         filepath.write_text(html, encoding="utf-8")
+    elif fmt == "pdf":
+        _save_pdf(report, filepath, topic=topic)
     else:
         filepath.write_text(report, encoding="utf-8")
 
@@ -295,6 +300,88 @@ def _markdown_to_text(md: str) -> str:
     text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
     text = re.sub(r'`(.+?)`', r'\1', text)
     return text
+
+
+def _save_pdf(report: str, path: Path, topic: str = "") -> None:
+    """Save report as PDF.
+
+    Attempts to use ``weasyprint`` if installed, otherwise falls back to
+    saving a print-optimized HTML file with a ``.pdf.html`` extension and
+    a helpful message.
+    """
+    html_content = markdown_to_html(report, topic=topic)
+
+    # Inject print-friendly CSS overrides
+    print_css = """
+    <style>
+        @media print {
+            body { background: white; color: black; }
+            .container { max-width: 100%; padding: 0; }
+            a { color: black; text-decoration: underline; }
+            pre { white-space: pre-wrap; border: 1px solid #ccc; }
+        }
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+    </style>
+    """
+    html_content = html_content.replace("</head>", print_css + "</head>")
+
+    try:
+        import weasyprint  # type: ignore[import-untyped]
+
+        weasyprint.HTML(string=html_content).write_pdf(str(path))
+    except ImportError:
+        # Fallback: save as HTML that can be printed to PDF
+        html_path = str(path) + ".html"
+        Path(html_path).write_text(html_content, encoding="utf-8")
+        # Also create a minimal PDF with just text using reportlab if available
+        try:
+            _create_text_pdf(report, path)
+        except ImportError:
+            # Last resort: rename the file to indicate it's HTML
+            import shutil
+            shutil.move(html_path, str(path))
+            import logging
+            logging.getLogger("deepworm").info(
+                "Saved as HTML (install 'weasyprint' for true PDF: pip install weasyprint)"
+            )
+
+
+def _create_text_pdf(text: str, path: Path) -> None:
+    """Create a basic PDF using reportlab (if available)."""
+    from reportlab.lib.pagesizes import A4  # type: ignore[import-untyped]
+    from reportlab.lib.styles import getSampleStyleSheet  # type: ignore[import-untyped]
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer  # type: ignore[import-untyped]
+
+    doc = SimpleDocTemplate(str(path), pagesize=A4)
+    styles = getSampleStyleSheet()
+    story = []
+
+    for line in text.split("\n"):
+        line = line.strip()
+        if not line:
+            story.append(Spacer(1, 12))
+            continue
+
+        if line.startswith("# "):
+            story.append(Paragraph(line[2:], styles["Heading1"]))
+        elif line.startswith("## "):
+            story.append(Paragraph(line[3:], styles["Heading2"]))
+        elif line.startswith("### "):
+            story.append(Paragraph(line[4:], styles["Heading3"]))
+        elif line.startswith("- ") or line.startswith("* "):
+            story.append(Paragraph(f"• {line[2:]}", styles["Normal"]))
+        else:
+            # Basic markdown cleanup
+            cleaned = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', line)
+            cleaned = re.sub(r'\*(.+?)\*', r'<i>\1</i>', cleaned)
+            cleaned = re.sub(r'`(.+?)`', r'<font face="Courier">\1</font>', cleaned)
+            cleaned = re.sub(r'\[(.+?)\]\((.+?)\)', r'\1', cleaned)
+            story.append(Paragraph(cleaned, styles["Normal"]))
+
+    doc.build(story)
 
 
 def _slugify(text: str) -> str:

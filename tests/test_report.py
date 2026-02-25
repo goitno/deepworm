@@ -73,3 +73,29 @@ def test_save_report_html(tmp_path):
     content = open(path).read()
     assert "<!DOCTYPE html>" in content
     assert "<h1>Test</h1>" in content
+
+
+def test_save_report_pdf_fallback(tmp_path):
+    """PDF export should work even without weasyprint (saves HTML fallback)."""
+    path = save_report(
+        "# PDF Test\n\nPDF content here.",
+        str(tmp_path / "report.pdf"),
+        topic="test",
+        fmt="pdf",
+    )
+    # Either a real PDF or an HTML fallback should exist
+    assert os.path.exists(path)
+
+
+def test_save_report_text(tmp_path):
+    """Should save plain text format."""
+    path = save_report(
+        "# Title\n\n**Bold** and *italic* text.",
+        str(tmp_path / "report.txt"),
+        topic="test",
+        fmt="text",
+    )
+    content = open(path).read()
+    assert "Title" in content
+    assert "**" not in content  # markdown stripped
+
