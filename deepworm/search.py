@@ -116,13 +116,13 @@ def _extract_ddg_url(href: str) -> str:
 
 def fetch_page_text(url: str, timeout: float = 10.0) -> str:
     """Fetch and extract text content from a URL."""
+    # Skip non-text URLs
+    skip_extensions = ('.pdf', '.jpg', '.jpeg', '.png', '.gif', '.svg', '.mp4', '.mp3', '.zip', '.tar', '.gz')
+    if any(url.lower().endswith(ext) for ext in skip_extensions):
+        return ""
+
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
-                          "AppleWebKit/537.36 (KHTML, like Gecko) "
-                          "Chrome/120.0.0.0 Safari/537.36"
-        }
-        resp = httpx.get(url, headers=headers, timeout=timeout, follow_redirects=True)
+        resp = httpx.get(url, headers=_HEADERS, timeout=timeout, follow_redirects=True)
         resp.raise_for_status()
 
         content_type = resp.headers.get("content-type", "")
@@ -140,26 +140,41 @@ def fetch_page_text(url: str, timeout: float = 10.0) -> str:
 
 
 def _extract_text_from_html(html: str) -> str:
-    """Extract readable text from HTML. Simple approach without BeautifulSoup."""
-    import re
+    """Extract readable text from HTML without external dependencies."""
 
-    # Remove script and style blocks
+    # Remove elements that don't contain useful content
     text = re.sub(r'<script[^>]*>.*?</script>', ' ', html, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r'<style[^>]*>.*?</style>', ' ', text, flags=re.DOTALL | re.IGNORECASE)
     text = re.sub(r'<head[^>]*>.*?</head>', ' ', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<nav[^>]*>.*?</nav>', ' ', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<footer[^>]*>.*?</footer>', ' ', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<header[^>]*>.*?</header>', ' ', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<aside[^>]*>.*?</aside>', ' ', text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r'<!--.*?-->', ' ', text, flags=re.DOTALL)
 
-    # Remove HTML tags
+    # Add line breaks for block elements
+    for tag in ['p', 'br', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'tr']:
+        text = re.sub(rf'</?{tag}[^>]*>', '\n', text, flags=re.IGNORECASE)
+
+    # Remove remaining HTML tags
     text = re.sub(r'<[^>]+>', ' ', text)
 
-    # Decode common HTML entities
+    # Decode HTML entities
     text = text.replace('&amp;', '&')
     text = text.replace('&lt;', '<')
     text = text.replace('&gt;', '>')
     text = text.replace('&quot;', '"')
     text = text.replace('&#39;', "'")
     text = text.replace('&nbsp;', ' ')
+    text = re.sub(r'&#(\d+);', lambda m: chr(int(m.group(1))), text)
+    text = re.sub(r'&#x([0-9a-fA-F]+);', lambda m: chr(int(m.group(1), 16)), text)
 
-    # Normalize whitespace
-    text = re.sub(r'\s+', ' ', text).strip()
+    # Clean up whitespace
+    lines = [line.strip() for line in text.split('\n')]
+    lines = [line for line in lines if line]  # remove empty lines
+    text = '\n'.join(lines)
 
-    return text
+    # Collapse multiple spaces within lines
+    text = re.sub(r'[ \t]+', ' ', text)
+
+    return text.strip()

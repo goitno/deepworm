@@ -7,10 +7,17 @@ Uses the OpenAI client for OpenAI and Ollama (compatible API).
 from __future__ import annotations
 
 import json
+import logging
 import os
+import time
 from typing import Any, Optional
 
 from .config import Config
+
+logger = logging.getLogger("deepworm")
+
+MAX_RETRIES = 3
+RETRY_BASE_DELAY = 1.0  # seconds
 
 
 def get_client(config: Config) -> "LLMClient":
@@ -50,9 +57,28 @@ class LLMClient:
     def chat(self, messages: list[dict[str, str]], temperature: float = 0.3) -> str:
         raise NotImplementedError
 
+    def chat_with_retry(
+        self,
+        messages: list[dict[str, str]],
+        temperature: float = 0.3,
+        max_retries: int = MAX_RETRIES,
+    ) -> str:
+        """Chat with automatic retry on transient failures."""
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                return self.chat(messages, temperature=temperature)
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    delay = RETRY_BASE_DELAY * (2 ** attempt)
+                    logger.debug(f"LLM call failed (attempt {attempt + 1}), retrying in {delay}s: {e}")
+                    time.sleep(delay)
+        raise last_error  # type: ignore[misc]
+
     def chat_json(self, messages: list[dict[str, str]], temperature: float = 0.1) -> Any:
         """Chat and parse the response as JSON."""
-        response = self.chat(messages, temperature=temperature)
+        response = self.chat_with_retry(messages, temperature=temperature)
         # Try to extract JSON from the response
         response = response.strip()
         if response.startswith("```"):

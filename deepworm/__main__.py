@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 
 from rich.console import Console
@@ -79,12 +80,20 @@ def build_parser() -> argparse.ArgumentParser:
         action="version",
         version=f"deepworm {__version__}",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
     return parser
 
 
 def main(args: list[str] | None = None) -> None:
     parser = build_parser()
     opts = parser.parse_args(args)
+
+    if opts.debug:
+        logging.basicConfig(level=logging.DEBUG, format="%(name)s %(levelname)s: %(message)s")
 
     if opts.topic is None:
         # Interactive mode
