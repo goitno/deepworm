@@ -511,7 +511,11 @@ tracker.complete()
 | Similarity analysis | Cosine, Jaccard, plagiarism detection | No |
 | Annotations | 6 types + auto-detect + CriticMarkup | No |
 | Batch research | Multi-topic with retry + config | No |
-| Lines of code | ~13,500 | ~10,000+ |
+| Timeline extraction | Date parsing + chronological ordering | No |
+| Bibliography mgmt | APA/MLA/BibTeX + auto-extraction | No |
+| Sentiment analysis | Lexicon-based + bias detection | No |
+| Cross-referencing | Sections/figures/tables + validation | No |
+| Lines of code | ~16,000 | ~10,000+ |
 
 deepworm is intentionally simple. If you need a web UI, multi-agent orchestration, or enterprise features, use gpt-researcher. If you want a research tool that just works, use deepworm.
 
@@ -578,6 +582,10 @@ deepworm is intentionally simple. If you need a web UI, multi-agent orchestratio
 - **Text similarity** — cosine, Jaccard, overlap; plagiarism detection and fingerprinting
 - **Report annotations** — 6 annotation types, auto-detect vague language, CriticMarkup
 - **Batch research** — run multiple topics with retry, stop-on-error, and callbacks
+- **Timeline extraction** — extract dates and events, build chronological timelines
+- **Bibliography management** — APA, MLA, BibTeX formatting with auto-extraction
+- **Sentiment analysis** — lexicon-based sentiment, tone, and bias detection
+- **Cross-referencing** — internal section/figure/table references with validation
 
 ## License
 

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2025-02-25
+
+### Added
+
+- **Timeline Extraction** (`timeline.py`): Extract dates and events from reports to build chronological timelines. 7 date pattern types (ISO, full date, month-year, quarter, decade, century, year references). Auto-categorization (technology, business, science, policy, milestone). `Timeline` with sort, filter, merge, deduplicate. `compare_timelines()` for overlap analysis. Markdown list, table, and dict output.
+- **Bibliography Management** (`references.py`): Structured reference management with APA, MLA, and BibTeX formatting. `Reference` with citation_key, author_string. `Bibliography` with add/find/sort/deduplicate, group by type. `extract_references()` detects inline citations, markdown links, bare URLs, DOIs, Author (Year) patterns. `inject_bibliography()` and `merge_bibliographies()`.
+- **Sentiment Analysis** (`sentiment.py`): Lexicon-based sentiment analysis with negation handling and intensifier detection. `SentimentScore` with positive/negative/compound scores. `ToneAnalysis` with formality, objectivity, 6 bias patterns. `analyze_report_sentiment()` with section and sentence breakdowns. `sentiment_diff()` for comparing text sentiment.
+- **Cross-Referencing** (`crossref.py`): Detect, create, and validate internal cross-references. `CrossRefIndex` with targets (section, figure, table) and links. `build_crossref_index()` scans `{#label}` and `{@label}` syntax. `inject_crossrefs()` replaces references with formatted display. `generate_list_of_figures()` and `generate_list_of_tables()`. Validation for unresolved references and duplicate labels.
+- **New Exports**: 25 new public API exports including `Timeline`, `TimelineEvent`, `extract_timeline`, `create_timeline`, `compare_timelines`, `Reference`, `Bibliography`, `extract_references`, `create_reference`, `inject_bibliography`, `merge_bibliographies`, `SentimentScore`, `SentimentReport`, `ToneAnalysis`, `analyze_sentiment`, `analyze_tone`, `analyze_report_sentiment`, `sentiment_diff`, `CrossRefIndex`, `CrossRefTarget`, `build_crossref_index`, `inject_crossrefs`, `generate_list_of_figures`, `generate_list_of_tables`. Total public API: 109 exports.
+
 ## [0.8.0] - 2025-02-25
 
 ### Added
