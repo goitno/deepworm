@@ -52,6 +52,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="LLM provider (default: auto-detect from env)",
     )
     parser.add_argument(
+        "--persona",
+        type=str,
+        default=None,
+        help="Research perspective/persona (e.g. 'startup founder', 'PhD student')",
+    )
+    parser.add_argument(
         "--output", "-o",
         type=str,
         default=None,
@@ -113,7 +119,11 @@ def main(args: list[str] | None = None) -> None:
     researcher = DeepResearcher(config=config)
 
     try:
-        report = researcher.research(opts.topic, verbose=not opts.quiet)
+        report = researcher.research(
+            opts.topic,
+            verbose=not opts.quiet,
+            persona=opts.persona,
+        )
     except KeyboardInterrupt:
         console.print("\n[yellow]Research interrupted.[/yellow]")
         return

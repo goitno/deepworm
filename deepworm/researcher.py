@@ -128,19 +128,31 @@ class DeepResearcher:
             self.client = get_client(self.config)
         return self.client
 
-    def research(self, topic: str, verbose: bool = True) -> str:
-        """Run deep research on a topic and return a markdown report."""
+    def research(self, topic: str, verbose: bool = True, persona: str | None = None) -> str:
+        """Run deep research on a topic and return a markdown report.
+
+        Args:
+            topic: Research topic or question.
+            verbose: Show progress output.
+            persona: Optional perspective for the research (e.g. "startup founder").
+        """
         state = ResearchState(topic=topic)
         llm = self._get_client()
 
+        # Build system context for persona
+        persona_context = ""
+        if persona:
+            persona_context = f"Write from the perspective of a {persona}. Focus on aspects most relevant to this audience."
+
         if verbose:
-            console.print(Panel(
+            info = (
                 f"[bold]{topic}[/bold]\n\n"
                 f"Provider: {self.config.provider} | Model: {self.config.model}\n"
-                f"Depth: {self.config.depth} | Breadth: {self.config.breadth}",
-                title="deepworm research",
-                border_style="blue",
-            ))
+                f"Depth: {self.config.depth} | Breadth: {self.config.breadth}"
+            )
+            if persona:
+                info += f"\nPersona: {persona}"
+            console.print(Panel(info, title="deepworm research", border_style="blue"))
 
         for i in range(self.config.depth):
             state.iterations_done = i + 1
@@ -185,7 +197,7 @@ class DeepResearcher:
         if verbose:
             console.print("\n[bold green]Synthesizing report...[/bold green]")
 
-        report = self._synthesize(llm, state)
+        report = self._synthesize(llm, state, persona_context)
 
         if verbose:
             console.print("[bold green]Done![/bold green]\n")
@@ -292,7 +304,7 @@ class DeepResearcher:
         except Exception as e:
             return f"Could not analyze: {e}"
 
-    def _synthesize(self, llm: LLMClient, state: ResearchState) -> str:
+    def _synthesize(self, llm: LLMClient, state: ResearchState, persona_context: str = "") -> str:
         """Synthesize all findings into a final report."""
         # Build findings with source attribution
         parts = []
@@ -306,6 +318,9 @@ class DeepResearcher:
             topic=state.topic,
             all_findings=all_findings,
         )
+        if persona_context:
+            prompt += f"\n\nAdditional context: {persona_context}"
+
         try:
             return llm.chat([
                 {"role": "system", "content": "You are an expert research report writer."},
