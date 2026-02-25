@@ -14,6 +14,7 @@ Orchestrates the research loop:
 from __future__ import annotations
 
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
@@ -221,29 +222,42 @@ class DeepResearcher:
         queries: list[str],
         verbose: bool = False,
     ) -> list[Source]:
-        """Search web and fetch content for each query."""
+        """Search web and fetch content for each query (concurrent)."""
         seen_urls: set[str] = set()
         sources: list[Source] = []
+        urls_to_fetch: list[SearchResult] = []
 
+        # Collect unique URLs from all queries
         for query in queries:
             results = search_web(query, max_results=self.config.max_sources)
             for r in results:
-                if r.url in seen_urls:
-                    continue
-                seen_urls.add(r.url)
+                if r.url not in seen_urls:
+                    seen_urls.add(r.url)
+                    urls_to_fetch.append(r)
 
-                if verbose:
-                    console.print(f"  [dim]Fetching: {r.title[:60]}...[/dim]")
+        # Fetch pages concurrently
+        def _fetch(result: SearchResult) -> Source:
+            body = fetch_page_text(result.url)
+            return Source(
+                url=result.url,
+                title=result.title,
+                content=body or result.snippet,
+            )
 
-                body = fetch_page_text(r.url)
-                sources.append(Source(
-                    url=r.url,
-                    title=r.title,
-                    content=body or r.snippet,
-                ))
+        max_workers = min(8, len(urls_to_fetch))
+        if max_workers == 0:
+            return sources
 
-                if len(sources) >= self.config.max_sources * len(queries):
-                    break
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {executor.submit(_fetch, r): r for r in urls_to_fetch}
+            for future in as_completed(futures):
+                try:
+                    source = future.result()
+                    sources.append(source)
+                    if verbose:
+                        console.print(f"  [dim]Fetched: {source.title[:60]}...[/dim]")
+                except Exception:
+                    pass
 
         return sources
 

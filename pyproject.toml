@@ -29,7 +29,6 @@ classifiers = [
 ]
 dependencies = [
     "httpx>=0.24.0",
-    "duckduckgo-search>=6.0.0",
     "rich>=13.0.0",
     "openai>=1.0.0",
 ]

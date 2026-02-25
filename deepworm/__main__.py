@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
 from rich.console import Console
@@ -62,6 +63,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Suppress progress output",
     )
     parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="json_output",
+        help="Output report as JSON with metadata",
+    )
+    parser.add_argument(
         "--version", "-v",
         action="version",
         version=f"deepworm {__version__}",
@@ -112,7 +119,18 @@ def main(args: list[str] | None = None) -> None:
         return
 
     # Output
-    if opts.output:
+    if opts.json_output:
+        import time
+        result = {
+            "topic": opts.topic,
+            "provider": config.provider,
+            "model": config.model,
+            "depth": config.depth,
+            "breadth": config.breadth,
+            "report": report,
+        }
+        print(json.dumps(result, indent=2))
+    elif opts.output:
         path = save_report(report, opts.output, topic=opts.topic)
         console.print(f"\n[green]Report saved to {path}[/green]")
     else:
