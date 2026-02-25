@@ -62,6 +62,42 @@ Topic
 
 Each iteration digs deeper. The LLM identifies what's missing and generates targeted follow-up searches. Default is 2 iterations with 4 queries each.
 
+## Example Output
+
+```
+$ deepworm "solid-state batteries 2024 breakthroughs"
+
+╭──────────────────────── deepworm research ─────────────────────────╮
+│ solid-state batteries 2024 breakthroughs                          │
+│                                                                   │
+│ Provider: openai | Model: gpt-4o-mini                             │
+│ Depth: 2 | Breadth: 4                                             │
+╰───────────────────────────────────────────────────────────────────╯
+
+--- Iteration 1/2 ---
+ Generated 4 search queries
+  • solid state battery breakthroughs 2024
+  • solid state battery companies production 2024
+  • solid state battery vs lithium ion comparison
+  • solid state battery challenges manufacturing scalability
+ Fetched 12 sources
+ Analyzing sources...
+
+--- Iteration 2/2 ---
+ Generated 4 search queries
+  • Toyota solid state battery timeline
+  • QuantumScape Samsung SDI solid state 2024
+  • solid state battery energy density improvements
+  • sulfide oxide electrolyte comparison
+ Fetched 9 sources
+ Analyzing sources...
+
+Synthesizing report...
+Done!
+```
+
+The output is a full Markdown report with sections, citations, and source URLs.
+
 ## Providers
 
 deepworm auto-detects your provider from environment variables:
@@ -89,6 +125,7 @@ deepworm "topic" -m gpt-4o     # use specific model
 deepworm "topic" -p ollama     # force Ollama provider
 deepworm "topic" -o report.md  # save to file
 deepworm "topic" -q            # quiet mode (no progress output)
+deepworm "topic" --json        # output as JSON (for piping)
 deepworm                       # interactive mode (prompts for topic)
 ```
 
@@ -114,7 +151,7 @@ report = researcher.research("your topic")
 | Install | `pip install deepworm` | Docker + multiple services |
 | Setup | One env var (or zero for Ollama) | Multiple API keys + config files |
 | Local models | Ollama out of the box | Limited |
-| Dependencies | 4 packages | 30+ packages |
+| Dependencies | 3 packages | 30+ packages |
 | Lines of code | ~500 | ~10,000+ |
 | Web UI | No (CLI-first) | Yes |
 
