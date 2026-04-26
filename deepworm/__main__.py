@@ -137,9 +137,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--search-provider",
         type=str,
-        choices=["duckduckgo", "brave", "searxng"],
+        choices=["duckduckgo", "brave", "searxng", "tavily"],
         default=None,
-        help="Search engine provider (default: duckduckgo)",
+        help="Search engine provider: duckduckgo, brave, searxng, tavily (default: duckduckgo)",
     )
     parser.add_argument(
         "--history",
