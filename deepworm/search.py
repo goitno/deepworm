@@ -1,6 +1,6 @@
 """Web search with multiple providers.
 
-Supports DuckDuckGo (default), Brave Search API, and SearXNG.
+Supports DuckDuckGo (default), Brave Search API, SearXNG, and Parallel Search MCP.
 """
 
 from __future__ import annotations
@@ -41,11 +41,13 @@ def search_web(
 ) -> list[SearchResult]:
     """Search the web using the specified provider.
 
-    Providers: duckduckgo (default), brave, searxng
+    Providers: duckduckgo (default), brave, searxng, parallel
     """
+    # Keep opt-in Parallel searches separate from the existing providers' cache.
+    cache_namespace = "search:parallel" if provider == "parallel" else "search"
     # Check cache first
     if cache is not None:
-        cached = cache.get("search", query)
+        cached = cache.get(cache_namespace, query)
         if cached is not None:
             logger.debug("Search cache hit: %s", query[:60])
             return [SearchResult(**r) for r in cached]
@@ -62,6 +64,13 @@ def search_web(
             results = _search_searxng(query, max_results)
         except Exception as e:
             logger.debug("SearXNG search failed: %s", e)
+    elif provider == "parallel":
+        try:
+            from .parallel import search_parallel
+
+            results = search_parallel(query, max_results)
+        except Exception as e:
+            logger.debug("Parallel search failed: %s", e)
 
     # Default/fallback: DuckDuckGo
     if not results:
@@ -81,7 +90,7 @@ def search_web(
 
     # Store in cache
     if cache is not None and results:
-        cache.set("search", query, [
+        cache.set(cache_namespace, query, [
             {"title": r.title, "url": r.url, "snippet": r.snippet}
             for r in results
         ])

@@ -38,10 +38,12 @@ dependencies = [
 anthropic = ["anthropic>=0.20.0"]
 google = ["google-genai>=1.0.0"]
 yaml = ["pyyaml>=6.0"]
+parallel = ["mcp>=1.30,<2; python_version >= '3.10'"]
 all = [
     "anthropic>=0.20.0",
     "google-genai>=1.0.0",
     "pyyaml>=6.0",
+    "mcp>=1.30,<2; python_version >= '3.10'",
 ]
 
 [project.scripts]

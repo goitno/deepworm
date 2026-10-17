@@ -46,6 +46,12 @@ def test_parser_all_flags():
     assert args.json_output is True
 
 
+@pytest.mark.parametrize("provider", ["duckduckgo", "brave", "searxng", "parallel"])
+def test_parser_search_provider(provider):
+    args = build_parser().parse_args(["test topic", "--search-provider", provider])
+    assert args.search_provider == provider
+
+
 def test_parser_interactive_flag():
     parser = build_parser()
     args = parser.parse_args(["topic", "-i"])

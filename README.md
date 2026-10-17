@@ -109,6 +109,30 @@ By default, deepworm uses Ollama combined with DuckDuckGo for web searches, keep
 
 ## ⚙️ Configuring deepworm
 
+### Optional Parallel web search
+
+On Python 3.10 or newer, install the optional MCP client and select Parallel:
+
+```bash
+pip install "deepworm[parallel]"
+deepworm "Latest advances in solid-state batteries" --search-provider parallel
+```
+
+When running from a source checkout, install with `pip install -e ".[parallel]"`.
+You can also set `DEEPWORM_SEARCH_PROVIDER=parallel` or pass
+`Config(search_provider="parallel")` through the Python API.
+
+[Parallel Search MCP](https://docs.parallel.ai/integrations/mcp/search-mcp)
+provides free, anonymous web search using Fast mode, with no account or API key.
+The anonymous service has usage limits. deepworm uses its Streamable HTTP
+endpoint at `https://search.parallel.ai/mcp` to discover research sources;
+page fetching and model configuration continue to use deepworm's existing paths.
+If Parallel fails or returns no results, deepworm falls back to DuckDuckGo.
+DuckDuckGo remains the default when no search provider is selected. Other search
+providers and the core installation do not require the MCP extra.
+
+### Model configuration
+
 You can choose which AI provider deepworm uses. Here’s how to switch providers:
 
 - Open the configuration file found at:
